@@ -48,7 +48,7 @@ User requested continuation of `/sp.implement` after providing Neon database cre
 
 Previous context:
 - User executed `/sp.specify`, `/sp.plan`, `/sp.tasks` to create complete specification and task breakdown
-- User provided Neon PostgreSQL credentials: `postgresql://neondb_owner:npg_SMITb2XGes4d@ep-empty-firefly-adztkgqw-pooler.c-2.us-east-1.aws.neon.tech/neondb`
+- User provided Neon PostgreSQL credentials
 - Selected manual deployment approach (Option 1) for 73 implementation tasks
 
 User input: "go ahead with Option 1"
