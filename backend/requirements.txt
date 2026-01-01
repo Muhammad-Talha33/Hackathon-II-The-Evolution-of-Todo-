@@ -1,0 +1,16 @@
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Database
+sqlmodel==0.0.14
+asyncpg==0.30.0  # Updated for Python 3.13 pre-built wheels
+alembic==1.13.1
+
+# Settings & Config
+pydantic-settings==2.1.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6

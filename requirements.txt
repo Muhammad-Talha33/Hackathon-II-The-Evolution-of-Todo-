@@ -1,0 +1,2 @@
+# Phase I: No external dependencies required
+# Python 3.13+ standard library only

@@ -1,0 +1,16 @@
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Database (using psycopg instead of asyncpg)
+sqlmodel==0.0.14
+psycopg[binary]==3.1.18  # Alternative async PostgreSQL driver with pre-built wheels
+alembic==1.13.1
+
+# Settings & Config
+pydantic-settings==2.1.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
