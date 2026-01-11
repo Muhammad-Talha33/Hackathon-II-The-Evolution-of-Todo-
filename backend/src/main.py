@@ -3,9 +3,19 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from src.config import settings
-from src.routers import auth_router, tasks_router
+from src.routers import auth_router, tasks_router, chat_router, conversations_router
 import logging
 from datetime import datetime
+import os
+
+# Set OpenAI API key in OS environment for OpenAI Agents SDK
+import sys
+api_key_value = settings.OPENAI_API_KEY
+sys.stderr.write(f"DEBUG: OPENAI_API_KEY from settings (first 30 chars): {api_key_value[:30]}...\n")
+sys.stderr.flush()
+os.environ["OPENAI_API_KEY"] = api_key_value
+sys.stderr.write(f"DEBUG: OPENAI_API_KEY set in os.environ (first 30 chars): {os.environ.get('OPENAI_API_KEY', 'NOT SET')[:30]}...\n")
+sys.stderr.flush()
 
 # Configure logging
 logging.basicConfig(
@@ -78,6 +88,8 @@ async def general_exception_handler(request: Request, exc: Exception):
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(tasks_router, prefix="/tasks", tags=["Tasks"])
+app.include_router(chat_router, prefix="/api", tags=["Chat"])
+app.include_router(conversations_router, prefix="/api", tags=["Conversations"])
 
 
 @app.get("/")

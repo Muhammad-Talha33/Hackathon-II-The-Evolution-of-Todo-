@@ -1,0 +1,411 @@
+openapi: 3.1.0
+info:
+  title: Todo AI Chatbot API
+  version: 1.0.0
+  description: |
+    RESTful API for the Todo AI Chatbot feature (Phase III).
+    Provides natural language interface for task management through conversational AI.
+
+servers:
+  - url: https://api.example.com/api
+    description: Production server
+  - url: http://localhost:8000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /chat:
+    post:
+      summary: Send a chat message to the AI assistant
+      description: |
+        Stateless endpoint that processes user messages and returns AI responses.
+        Automatically creates or retrieves conversation thread.
+        AI agent can call MCP tools to manage tasks.
+
+      operationId: sendChatMessage
+      tags:
+        - Chat
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              createTask:
+                summary: Create a new task
+                value:
+                  message: "Add buy groceries to my tasks"
+                  conversation_id: null
+              listTasks:
+                summary: List tasks
+                value:
+                  message: "What's on my todo list?"
+                  conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+              completeTask:
+                summary: Complete a task
+                value:
+                  message: "Mark the grocery task as done"
+                  conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+
+      responses:
+        '200':
+          description: Successful response with AI assistant's message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                taskCreated:
+                  summary: Task created confirmation
+                  value:
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+                    message: "I've added 'buy groceries' to your tasks. You now have 3 incomplete tasks."
+                    created_at: "2026-01-03T10:30:18Z"
+                tasksList:
+                  summary: Tasks listed
+                  value:
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+                    message: "You have 3 tasks:\n1. Buy groceries (incomplete)\n2. Finish report (incomplete)\n3. Call John (incomplete)"
+                    created_at: "2026-01-03T10:31:22Z"
+
+        '400':
+          description: Bad request (invalid message format or missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Message cannot be empty"
+                error_code: "INVALID_MESSAGE"
+
+        '401':
+          description: Unauthorized (missing or invalid JWT token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Authentication required"
+                error_code: "UNAUTHORIZED"
+
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Rate limit exceeded. Please try again in 60 seconds."
+                error_code: "RATE_LIMIT_EXCEEDED"
+                retry_after: 60
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "An unexpected error occurred. Please try again later."
+                error_code: "INTERNAL_ERROR"
+
+  /conversations:
+    get:
+      summary: List user's conversations
+      description: |
+        Retrieve all conversations for the authenticated user,
+        ordered by most recently updated.
+
+      operationId: listConversations
+      tags:
+        - Conversations
+
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of conversations to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of conversations to skip (for pagination)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationSummary'
+                  total:
+                    type: integer
+                    description: Total number of conversations for this user
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+              example:
+                conversations:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    created_at: "2026-01-03T10:30:00Z"
+                    updated_at: "2026-01-03T10:35:00Z"
+                    message_count: 8
+                    last_message_preview: "I've marked 'buy groceries' as complete."
+                  - id: "660e8400-e29b-41d4-a716-446655440001"
+                    created_at: "2026-01-02T14:20:00Z"
+                    updated_at: "2026-01-02T14:25:00Z"
+                    message_count: 4
+                    last_message_preview: "You have 5 incomplete tasks."
+                total: 12
+                limit: 20
+                offset: 0
+
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /conversations/{conversation_id}/messages:
+    get:
+      summary: Get conversation message history
+      description: |
+        Retrieve all messages in a specific conversation,
+        ordered chronologically.
+
+      operationId: getConversationMessages
+      tags:
+        - Conversations
+
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          description: UUID of the conversation
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of messages to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: before
+          in: query
+          description: Return messages before this message ID (for pagination)
+          required: false
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  has_more:
+                    type: boolean
+                    description: Whether there are more messages to load
+              example:
+                messages:
+                  - id: "650e8400-e29b-41d4-a716-446655440001"
+                    role: "user"
+                    content: "Add buy groceries to my tasks"
+                    created_at: "2026-01-03T10:30:15Z"
+                  - id: "650e8400-e29b-41d4-a716-446655440002"
+                    role: "assistant"
+                    content: "I've added 'buy groceries' to your tasks. You now have 3 incomplete tasks."
+                    created_at: "2026-01-03T10:30:18Z"
+                has_more: false
+
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '403':
+          description: Forbidden (conversation belongs to different user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "You don't have permission to access this conversation"
+                error_code: "FORBIDDEN"
+
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Conversation not found"
+                error_code: "NOT_FOUND"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token from Phase II authentication.
+        Include in Authorization header: `Bearer <token>`
+
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: User's message to the AI assistant
+          example: "Add buy groceries to my tasks"
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            UUID of existing conversation to continue.
+            If null or omitted, a new conversation will be created.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    ChatResponse:
+      type: object
+      required:
+        - conversation_id
+        - message
+        - created_at
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+          description: UUID of the conversation (new or existing)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        message:
+          type: string
+          description: AI assistant's response message
+          example: "I've added 'buy groceries' to your tasks. You now have 3 incomplete tasks."
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated
+          example: "2026-01-03T10:30:18Z"
+
+    Message:
+      type: object
+      required:
+        - id
+        - role
+        - content
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique message identifier
+        role:
+          type: string
+          enum: [user, assistant]
+          description: Who sent the message
+        content:
+          type: string
+          description: Message text content
+        created_at:
+          type: string
+          format: date-time
+          description: When the message was created
+
+    ConversationSummary:
+      type: object
+      required:
+        - id
+        - created_at
+        - updated_at
+        - message_count
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique conversation identifier
+        created_at:
+          type: string
+          format: date-time
+          description: When the conversation was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the last message was added
+        message_count:
+          type: integer
+          description: Total number of messages in the conversation
+        last_message_preview:
+          type: string
+          description: Preview of the most recent message (first 100 chars)
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - error_code
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        error_code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - INVALID_MESSAGE
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - RATE_LIMIT_EXCEEDED
+            - INTERNAL_ERROR
+        retry_after:
+          type: integer
+          nullable: true
+          description: Seconds to wait before retrying (for rate limiting)
+
+tags:
+  - name: Chat
+    description: AI chatbot messaging endpoints
+  - name: Conversations
+    description: Conversation management and history

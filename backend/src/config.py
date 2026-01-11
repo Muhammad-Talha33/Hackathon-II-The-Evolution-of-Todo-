@@ -1,6 +1,14 @@
 """Application configuration using Pydantic Settings."""
 from pydantic_settings import BaseSettings
 from typing import List
+from pathlib import Path
+import os
+
+# Load .env file explicitly
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=env_path)
 
 
 class Settings(BaseSettings):
@@ -19,6 +27,9 @@ class Settings(BaseSettings):
 
     # Environment
     ENVIRONMENT: str = "development"
+
+    # Phase III - OpenAI API (Chatbot)
+    OPENAI_API_KEY: str = "your-openai-api-key-here"
 
     @property
     def cors_origins_list(self) -> List[str]:

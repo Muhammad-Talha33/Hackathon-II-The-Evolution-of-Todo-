@@ -5,10 +5,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, Task, TaskCreate } from '@/lib/api';
+import { useTaskRefresh } from '@/contexts/TaskRefreshContext';
 
 export default function TasksPage() {
   const { isAuthenticated, isLoading: authLoading, getAccessToken, signout } = useAuth();
   const router = useRouter();
+  const { onTasksChange } = useTaskRefresh();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,6 +42,17 @@ export default function TasksPage() {
       fetchTasks();
     }
   }, [isAuthenticated]);
+
+  // Listen for task changes from ChatWidget
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const unsubscribe = onTasksChange(() => {
+      fetchTasks();
+    });
+
+    return unsubscribe;
+  }, [isAuthenticated, onTasksChange]);
 
   const fetchTasks = async () => {
     try {
