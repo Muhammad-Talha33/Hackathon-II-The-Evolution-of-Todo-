@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, Task, TaskCreate } from '@/lib/api';
 import { useTaskRefresh } from '@/contexts/TaskRefreshContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function TasksPage() {
   const { isAuthenticated, isLoading: authLoading, getAccessToken, signout } = useAuth();
@@ -280,10 +281,10 @@ export default function TasksPage() {
             <div className="flex items-center">
               <button
                 onClick={signout}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
               >
                 <svg
-                  className="h-4 w-4 mr-2"
+                  className="h-4 w-4 md:mr-2"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -295,7 +296,7 @@ export default function TasksPage() {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                Sign Out
+                <span className="hidden md:inline">Sign Out</span>
               </button>
             </div>
           </div>
@@ -520,15 +521,15 @@ export default function TasksPage() {
         </div>
 
         {/* Task List */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-2xl shadow-xl p-4 md:p-6 border border-gray-100">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Your Tasks</h2>
 
             {/* Filter Tabs */}
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   filter === 'all'
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -538,7 +539,7 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={() => setFilter('incomplete')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   filter === 'incomplete'
                     ? 'bg-yellow-100 text-yellow-700'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -548,7 +549,7 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={() => setFilter('complete')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   filter === 'complete'
                     ? 'bg-green-100 text-green-700'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -608,15 +609,21 @@ export default function TasksPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className={`border rounded-xl p-5 transition-all ${
-                    task.status === 'complete'
-                      ? 'border-green-200 bg-green-50/50'
-                      : 'border-gray-200 bg-white hover:shadow-lg hover:border-blue-200'
-                  }`}
-                >
+              <AnimatePresence mode="popLayout">
+                {filteredTasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.2 }}
+                    layout
+                    className={`border rounded-xl p-5 transition-all ${
+                      task.status === 'complete'
+                        ? 'border-green-200 bg-green-50/50'
+                        : 'border-gray-200 bg-white hover:shadow-lg hover:border-blue-200'
+                    }`}
+                  >
                   {editingTaskId === task.id ? (
                     // Edit mode
                     <div className="space-y-4">
@@ -663,17 +670,17 @@ export default function TasksPage() {
                     </div>
                   ) : (
                     // View mode
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-1">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <div className="flex items-start space-x-3 md:space-x-4 flex-1 min-w-0">
                         <input
                           type="checkbox"
                           checked={task.status === 'complete'}
                           onChange={() => handleToggleComplete(task.id)}
-                          className="mt-1 h-6 w-6 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer transition-all"
+                          className="mt-1 h-5 w-5 md:h-6 md:w-6 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer transition-all flex-shrink-0"
                         />
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <h3
-                            className={`text-lg font-semibold ${
+                            className={`text-base md:text-lg font-semibold break-words ${
                               task.status === 'complete'
                                 ? 'line-through text-gray-500'
                                 : 'text-gray-900'
@@ -683,7 +690,7 @@ export default function TasksPage() {
                           </h3>
                           {task.description && (
                             <p
-                              className={`mt-1 text-sm ${
+                              className={`mt-1 text-sm break-words ${
                                 task.status === 'complete'
                                   ? 'line-through text-gray-400'
                                   : 'text-gray-600'
@@ -692,22 +699,22 @@ export default function TasksPage() {
                               {task.description}
                             </p>
                           )}
-                          <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                            <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-medium ${
                               task.status === 'complete'
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-yellow-100 text-yellow-700'
                             }`}>
                               {task.status === 'complete' ? (
                                 <>
-                                  <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
                                   Completed
                                 </>
                               ) : (
                                 <>
-                                  <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                                   </svg>
                                   In Progress
@@ -715,26 +722,28 @@ export default function TasksPage() {
                               )}
                             </span>
                             <span className="flex items-center">
-                              <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                               </svg>
-                              {new Date(task.created_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}
+                              <span className="truncate">
+                                {new Date(task.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </span>
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-2 md:ml-4 flex-shrink-0">
                         <button
                           onClick={() => handleStartEdit(task)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg focus:outline-none transition-all"
+                          className="flex-1 md:flex-none px-4 md:px-0 md:p-2 py-2 text-sm md:text-base font-medium md:font-normal text-blue-600 hover:bg-blue-50 rounded-lg focus:outline-none transition-all border md:border-0 border-blue-200"
                           title="Edit task"
                         >
                           <svg
-                            className="h-5 w-5"
+                            className="h-5 w-5 mx-auto md:mx-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -749,11 +758,11 @@ export default function TasksPage() {
                         </button>
                         <button
                           onClick={() => handleDeleteTask(task.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg focus:outline-none transition-all"
+                          className="flex-1 md:flex-none px-4 md:px-0 md:p-2 py-2 text-sm md:text-base font-medium md:font-normal text-red-600 hover:bg-red-50 rounded-lg focus:outline-none transition-all border md:border-0 border-red-200"
                           title="Delete task"
                         >
                           <svg
-                            className="h-5 w-5"
+                            className="h-5 w-5 mx-auto md:mx-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -769,8 +778,9 @@ export default function TasksPage() {
                       </div>
                     </div>
                   )}
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>

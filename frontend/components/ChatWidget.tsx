@@ -5,6 +5,7 @@ import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
 import Cookies from "js-cookie";
 import { api } from "@/lib/api";
 import { useTaskRefresh } from "@/contexts/TaskRefreshContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   role: "user" | "assistant";
@@ -108,58 +109,83 @@ export default function ChatWidget() {
   return (
     <>
       {/* Floating Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full shadow-2xl hover:shadow-purple-500/50 hover:scale-110 transition-all flex items-center justify-center group z-50"
-        >
-          <MessageCircle className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
-          {messages.length > 0 && !isMinimized && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full border-2 border-white text-xs font-bold text-white flex items-center justify-center">
-              {messages.length}
-            </span>
-          )}
-        </button>
-      )}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-6 right-6 h-14 w-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full shadow-2xl hover:shadow-purple-500/50 hover:scale-110 transition-all flex items-center justify-center group z-50"
+          >
+            <MessageCircle className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
+            {messages.length > 0 && !isMinimized && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full border-2 border-white text-xs font-bold text-white flex items-center justify-center">
+                {messages.length}
+              </span>
+            )}
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Chat Widget */}
-      {isOpen && (
-        <div
-          className={`fixed bottom-6 right-6 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50 ${
-            isMinimized ? "h-16" : "h-[600px]"
-          } transition-all`}
-        >
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">Task Assistant</h3>
-                <p className="text-xs text-blue-100">Always here to help</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Mobile Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setIsOpen(false)}
+            />
 
-          {/* Messages */}
-          {!isMinimized && (
-            <div className="flex flex-col h-[calc(600px-8rem)]">
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {/* Widget Container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className={`fixed z-50 bg-white shadow-2xl border border-gray-200 overflow-hidden ${
+                isMinimized
+                  ? "bottom-6 right-6 w-80 md:w-96 h-16 rounded-2xl"
+                  : "inset-x-0 bottom-0 top-0 md:inset-auto md:bottom-6 md:right-6 md:w-96 md:h-[600px] md:rounded-2xl md:top-auto"
+              } transition-all`}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Task Assistant</h3>
+                    <p className="text-xs text-blue-100">Always here to help</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setIsMinimized(!isMinimized)}
+                    className="hidden md:block p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Messages */}
+              {!isMinimized && (
+                <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(600px-8rem)]">
+                  <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                 {messages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -249,8 +275,10 @@ export default function ChatWidget() {
               </form>
             </div>
           )}
-        </div>
-      )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
