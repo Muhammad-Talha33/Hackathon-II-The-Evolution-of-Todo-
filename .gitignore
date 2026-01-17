@@ -77,3 +77,22 @@ backend/*.pyc
 *.tmp
 *.bak
 nul
+
+# Kubernetes & Helm Secrets (Phase IV Deployment)
+values-local.yaml
+values-*.local.yaml
+**/values-local.yaml
+*-secrets.yaml
+*-secrets.env
+*.secret.yaml
+secrets/
+.kube/
+kubeconfig*
+*.key
+*.crt
+helm/*/values-local.yaml
+
+# Docker Compose overrides with secrets
+docker-compose.override.yml
+.env.local
+*.env.local

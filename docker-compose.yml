@@ -1,0 +1,124 @@
+# =============================================================================
+# Docker Compose Configuration - Todo AI Chatbot
+# =============================================================================
+# Purpose: Local container orchestration for development and testing
+# Track: A (Immediate deployment without Kubernetes)
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in secrets
+#   2. docker-compose up -d           # Start all services
+#   3. docker-compose logs -f         # View logs
+#   4. docker-compose down            # Stop all services
+#
+# Access:
+#   - Frontend: http://localhost:3000
+#   - Backend API: http://localhost:8000
+#   - API Docs: http://localhost:8000/docs
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Backend Service - FastAPI Application
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+    image: todo-backend:latest
+    container_name: todo-backend
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    # Load environment variables from .env file
+    env_file:
+      - .env
+
+    # Additional environment variables (can override .env)
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - PYTHONUNBUFFERED=1
+
+    networks:
+      - todo-network
+
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # Resource limits (optional - uncomment for production)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  # ===========================================================================
+  # Frontend Service - Next.js Application
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      args:
+        # Build-time environment variable for API URL
+        - NEXT_PUBLIC_API_URL=http://backend:8000
+    image: todo-frontend:latest
+    container_name: todo-frontend
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    # Runtime environment variables
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NODE_ENV=production
+
+    # Wait for backend to be healthy before starting
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    networks:
+      - todo-network
+
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # Resource limits (optional)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.25'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 128M
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  todo-network:
+    driver: bridge
+    name: todo-network
+
+# =============================================================================
+# Volumes (None required - stateless containers)
+# =============================================================================
+# External database (Neon PostgreSQL) is used, so no local database volume needed

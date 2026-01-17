@@ -1,0 +1,77 @@
+# Helm Values Schema for Frontend Chart
+# File: helm/frontend/values.yaml
+
+# Replica configuration
+replicaCount: 1  # Number of frontend pods (1 for local, 2+ for production)
+
+# Image configuration
+image:
+  repository: todo-frontend  # Image name (without tag)
+  tag: latest               # Image tag (use semantic versioning in production)
+  pullPolicy: IfNotPresent  # Kubernetes image pull policy
+
+# Service configuration
+service:
+  type: NodePort             # Service type (NodePort for dev, LoadBalancer for prod)
+  port: 3000                 # Service port
+  targetPort: 3000           # Container port
+  nodePort: 30080            # Static NodePort assignment (30000-32767 range)
+  annotations: {}            # Optional service annotations
+
+# Resource limits and requests
+resources:
+  requests:
+    memory: "128Mi"          # Minimum memory allocation
+    cpu: "100m"              # Minimum CPU allocation (0.1 cores)
+  limits:
+    memory: "256Mi"          # Maximum memory allocation
+    cpu: "250m"              # Maximum CPU allocation (0.25 cores)
+
+# Health check configuration
+livenessProbe:
+  httpGet:
+    path: /                  # Health check endpoint (Next.js homepage)
+    port: 3000
+  initialDelaySeconds: 10    # Wait before first probe
+  periodSeconds: 20          # Interval between probes
+  timeoutSeconds: 5          # Probe timeout
+  failureThreshold: 3        # Failures before pod restart
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Configuration (non-sensitive)
+config:
+  apiUrl: "http://todo-backend:8000"  # Backend API URL (in-cluster DNS)
+  nodeEnv: "production"               # Node environment
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1              # Max extra pods during update
+    maxUnavailable: 0        # Min pods available during update
+
+# Node selector (optional)
+nodeSelector: {}
+
+# Tolerations (optional)
+tolerations: []
+
+# Affinity rules (optional)
+affinity: {}
+
+# Pod annotations (optional)
+podAnnotations: {}
+
+# Security context (optional)
+securityContext:
+  runAsNonRoot: false  # Set to true if Dockerfile creates non-root user
+  # runAsUser: 1000
+  # fsGroup: 1000

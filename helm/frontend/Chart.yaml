@@ -1,0 +1,44 @@
+apiVersion: v2
+name: todo-frontend
+description: Helm chart for Todo AI Chatbot Frontend (Next.js)
+type: application
+
+# Chart version - increment this on every chart change
+version: 1.0.0
+
+# Application version - matches frontend application version
+appVersion: "1.0.0"
+
+# Metadata
+keywords:
+  - todo
+  - frontend
+  - nextjs
+  - react
+  - ai-chatbot
+  - web
+
+maintainers:
+  - name: Todo AI Chatbot Team
+    email: team@example.com
+
+# Chart dependencies (none for this simple deployment)
+# dependencies: []
+
+# Minimum Kubernetes version required
+kubeVersion: ">=1.25.0"
+
+# Home page and sources
+home: https://github.com/yourusername/todo-ai-chatbot
+sources:
+  - https://github.com/yourusername/todo-ai-chatbot
+
+# Icon for the chart (optional)
+# icon: https://example.com/icon.png
+
+# Annotations for additional metadata
+annotations:
+  # Category for Helm chart repositories
+  category: Frontend
+  # License
+  licenses: MIT

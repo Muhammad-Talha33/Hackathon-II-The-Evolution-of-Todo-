@@ -1,0 +1,174 @@
+# Default values for todo-frontend Helm chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# ==============================================================================
+# Replica Configuration
+# ==============================================================================
+replicaCount: 1  # Number of frontend pods (1 for local, 2+ for production)
+
+# ==============================================================================
+# Image Configuration
+# ==============================================================================
+image:
+  repository: todo-frontend  # Image name (without tag)
+  tag: latest               # Image tag (use semantic versioning in production)
+  pullPolicy: IfNotPresent  # Kubernetes image pull policy (IfNotPresent, Always, Never)
+
+# ==============================================================================
+# Service Configuration
+# ==============================================================================
+service:
+  type: NodePort             # Service type (NodePort for dev, LoadBalancer for prod, ClusterIP for internal)
+  port: 3000                 # Service port
+  targetPort: 3000           # Container port
+  nodePort: 30080            # Static NodePort assignment (30000-32767 range)
+  annotations: {}            # Optional service annotations
+
+# ==============================================================================
+# Resource Limits and Requests
+# ==============================================================================
+resources:
+  requests:
+    memory: "128Mi"          # Minimum memory allocation
+    cpu: "100m"              # Minimum CPU allocation (0.1 cores)
+  limits:
+    memory: "256Mi"          # Maximum memory allocation
+    cpu: "250m"              # Maximum CPU allocation (0.25 cores)
+
+# ==============================================================================
+# Health Check Configuration
+# ==============================================================================
+livenessProbe:
+  httpGet:
+    path: /                  # Health check endpoint (Next.js homepage)
+    port: 3000
+  initialDelaySeconds: 10    # Wait before first probe
+  periodSeconds: 20          # Interval between probes
+  timeoutSeconds: 5          # Probe timeout
+  failureThreshold: 3        # Failures before pod restart
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# ==============================================================================
+# Configuration (Non-Sensitive)
+# ==============================================================================
+config:
+  # Backend API URL - uses in-cluster DNS
+  # For Minikube: http://todo-backend:8000
+  # For kind: http://todo-backend:8000
+  # For external: http://localhost:8000 (if backend exposed)
+  apiUrl: "http://todo-backend:8000"
+
+  # Node environment
+  nodeEnv: "production"  # Options: development, production
+
+# ==============================================================================
+# Deployment Strategy
+# ==============================================================================
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1              # Max extra pods during update
+    maxUnavailable: 0        # Min pods available during update (zero-downtime)
+
+# ==============================================================================
+# Node Selector (Optional)
+# ==============================================================================
+# Example: Schedule pods on specific nodes
+# nodeSelector:
+#   disktype: ssd
+nodeSelector: {}
+
+# ==============================================================================
+# Tolerations (Optional)
+# ==============================================================================
+# Example: Allow pods to run on tainted nodes
+# tolerations:
+#   - key: "key1"
+#     operator: "Equal"
+#     value: "value1"
+#     effect: "NoSchedule"
+tolerations: []
+
+# ==============================================================================
+# Affinity Rules (Optional)
+# ==============================================================================
+# Example: Co-locate with backend or spread across zones
+# affinity:
+#   podAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#       - labelSelector:
+#           matchExpressions:
+#             - key: app
+#               operator: In
+#               values:
+#                 - todo-backend
+#         topologyKey: kubernetes.io/hostname
+affinity: {}
+
+# ==============================================================================
+# Pod Annotations (Optional)
+# ==============================================================================
+# Example: Add custom annotations for monitoring, logging, etc.
+# podAnnotations:
+#   prometheus.io/scrape: "true"
+#   prometheus.io/port: "3000"
+podAnnotations: {}
+
+# ==============================================================================
+# Security Context (Optional)
+# ==============================================================================
+# Uncomment if using non-root user in Dockerfile
+securityContext:
+  runAsNonRoot: true   # Frontend Dockerfile creates nextjs user (uid 1001)
+  runAsUser: 1001
+  fsGroup: 1001
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false  # Set to true if application doesn't write to disk
+
+# ==============================================================================
+# Service Account (Optional)
+# ==============================================================================
+# Create a service account for pod identity
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""  # If blank, will use chart fullname
+
+# ==============================================================================
+# Autoscaling (Optional - for production)
+# ==============================================================================
+# autoscaling:
+#   enabled: false
+#   minReplicas: 1
+#   maxReplicas: 10
+#   targetCPUUtilizationPercentage: 80
+#   targetMemoryUtilizationPercentage: 80
+
+# ==============================================================================
+# Ingress (Optional - for external access)
+# ==============================================================================
+# ingress:
+#   enabled: false
+#   className: "nginx"
+#   annotations:
+#     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+#   hosts:
+#     - host: todo-app.example.com
+#       paths:
+#         - path: /
+#           pathType: Prefix
+#   tls:
+#     - secretName: todo-frontend-tls
+#       hosts:
+#         - todo-app.example.com

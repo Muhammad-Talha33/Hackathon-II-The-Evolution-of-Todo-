@@ -1,0 +1,109 @@
+🎉 Todo AI Chatbot Backend has been deployed!
+
+Chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 Deployment Status:
+
+   kubectl get deployment {{ include "backend.fullname" . }}
+   kubectl get pods -l app=todo-backend
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 Service Information:
+
+   Service Name: {{ include "backend.fullname" . }}
+   Service Type: {{ .Values.service.type }}
+   Service Port: {{ .Values.service.port }}
+
+{{- if eq .Values.service.type "ClusterIP" }}
+
+   The backend is only accessible within the cluster.
+
+   To access from your local machine, use port-forward:
+
+      kubectl port-forward svc/{{ include "backend.fullname" . }} 8000:{{ .Values.service.port }}
+
+   Then access:
+      - API:         http://localhost:8000
+      - Health:      http://localhost:8000/health
+      - API Docs:    http://localhost:8000/docs
+
+{{- else if eq .Values.service.type "NodePort" }}
+
+   Access the backend via NodePort:
+
+      kubectl get svc {{ include "backend.fullname" . }} -o jsonpath='{.spec.ports[0].nodePort}'
+
+   Then access:
+      - http://localhost:<NodePort>
+      - http://localhost:<NodePort>/health
+      - http://localhost:<NodePort>/docs
+
+{{- else if eq .Values.service.type "LoadBalancer" }}
+
+   Get the external IP:
+
+      kubectl get svc {{ include "backend.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+   Once available, access:
+      - http://<EXTERNAL-IP>:{{ .Values.service.port }}
+
+{{- end }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 View Logs:
+
+   kubectl logs -l app=todo-backend --tail=100 -f
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 Verify Health:
+
+   # Via port-forward
+   kubectl port-forward svc/{{ include "backend.fullname" . }} 8000:{{ .Values.service.port }}
+   curl http://localhost:8000/health
+
+   Expected response:
+   {"status":"healthy","environment":"{{ .Values.config.environment }}"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 Security:
+
+   Secrets are stored in: {{ include "backend.secretName" . }}
+
+   ⚠️  NEVER expose secrets! Verify:
+
+      kubectl describe pod <pod-name> | grep -A 5 Environment
+
+   You should see secretRef but NOT actual secret values.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 Upgrade the Release:
+
+   helm upgrade {{ .Release.Name }} ./helm/backend -f helm/backend/values-local.yaml
+
+🗑️  Uninstall the Release:
+
+   helm uninstall {{ .Release.Name }}
+
+📖 Documentation:
+
+   See docs/deployment/kubernetes.md for complete guide
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Next Steps:
+
+   1. Verify pods are running: kubectl get pods
+   2. Check service is created: kubectl get svc
+   3. Test health endpoint (see above)
+   4. Deploy frontend: helm install todo-frontend ./helm/frontend
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

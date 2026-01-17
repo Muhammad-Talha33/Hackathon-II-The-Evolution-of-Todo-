@@ -1,0 +1,86 @@
+# Helm Values Schema for Backend Chart
+# File: helm/backend/values.yaml
+
+# Replica configuration
+replicaCount: 1  # Number of backend pods (1 for local, 2+ for production)
+
+# Image configuration
+image:
+  repository: todo-backend  # Image name (without tag)
+  tag: latest              # Image tag (use semantic versioning in production)
+  pullPolicy: IfNotPresent # Kubernetes image pull policy
+
+# Service configuration
+service:
+  type: ClusterIP          # Service type (ClusterIP for internal-only access)
+  port: 8000               # Service port
+  targetPort: 8000         # Container port
+  annotations: {}          # Optional service annotations
+
+# Resource limits and requests
+resources:
+  requests:
+    memory: "256Mi"        # Minimum memory allocation
+    cpu: "250m"            # Minimum CPU allocation (0.25 cores)
+  limits:
+    memory: "512Mi"        # Maximum memory allocation
+    cpu: "500m"            # Maximum CPU allocation (0.5 cores)
+
+# Health check configuration
+livenessProbe:
+  httpGet:
+    path: /health          # Health check endpoint
+    port: 8000
+  initialDelaySeconds: 15  # Wait before first probe
+  periodSeconds: 20        # Interval between probes
+  timeoutSeconds: 5        # Probe timeout
+  failureThreshold: 3      # Failures before pod restart
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Secrets (REQUIRED - must be overridden)
+# NEVER commit actual values! Use values-local.yaml (gitignored) or --set flags
+secrets:
+  openaiApiKey: ""         # REQUIRED: OpenAI API key (sk-...)
+  databaseUrl: ""          # REQUIRED: Neon PostgreSQL URL (postgresql://...)
+  secretKey: ""            # REQUIRED: JWT signing secret (generate with: openssl rand -hex 32)
+  refreshTokenExpireDays: "7"          # Token expiration in days
+  accessTokenExpireMinutes: "60"      # Access token TTL in minutes
+
+# Non-sensitive configuration
+config:
+  corsOrigins: "http://localhost:30080,http://todo-frontend:3000"  # Allowed CORS origins
+  environment: "development"  # Deployment environment (development/staging/production)
+  logLevel: "INFO"           # Logging level
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1              # Max extra pods during update
+    maxUnavailable: 0        # Min pods available during update
+
+# Node selector (optional)
+nodeSelector: {}
+
+# Tolerations (optional)
+tolerations: []
+
+# Affinity rules (optional)
+affinity: {}
+
+# Pod annotations (optional)
+podAnnotations: {}
+
+# Security context (optional)
+securityContext:
+  runAsNonRoot: false  # Set to true if Dockerfile creates non-root user
+  # runAsUser: 1000
+  # fsGroup: 1000
