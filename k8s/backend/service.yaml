@@ -1,0 +1,39 @@
+# =============================================================================
+# Backend Service - Todo AI Chatbot
+# =============================================================================
+# Exposes the backend deployment within the cluster
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-backend
+  labels:
+    app: todo-backend
+    component: backend
+    part-of: todo-chatbot
+spec:
+  type: ClusterIP
+  selector:
+    app: todo-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+
+---
+# =============================================================================
+# Backend ConfigMap - Non-sensitive configuration
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-backend-config
+  labels:
+    app: todo-backend
+data:
+  ENVIRONMENT: "development"
+  CORS_ORIGINS: "http://localhost:3000,http://localhost:30080,http://todo-frontend:3000"
+  PYTHONUNBUFFERED: "1"

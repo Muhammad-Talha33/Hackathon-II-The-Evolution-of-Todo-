@@ -1,0 +1,75 @@
+# =============================================================================
+# Frontend Deployment - Todo AI Chatbot
+# =============================================================================
+# Alternative to Helm chart - hardcoded Kubernetes manifest
+# Usage: kubectl apply -f k8s/frontend/
+#
+# Prerequisites:
+#   1. Backend must be deployed first
+#   2. Build and load image: kind load docker-image todo-frontend:latest
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-frontend
+  labels:
+    app: todo-frontend
+    component: frontend
+    part-of: todo-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-frontend
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: todo-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          # Environment variables from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: todo-frontend-config
+
+          # Liveness probe
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          # Readiness probe
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Resource limits and requests
+          resources:
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+      # Restart policy
+      restartPolicy: Always

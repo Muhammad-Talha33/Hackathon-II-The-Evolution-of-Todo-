@@ -617,12 +617,45 @@ docker image prune
 
 ---
 
+## AI-Assisted DevOps Tools (Optional)
+
+For enhanced Kubernetes operations, you can use AI-powered tools that accept natural language commands:
+
+### kubectl-ai
+
+```bash
+# Install
+pip install kubectl-ai
+
+# Examples
+kubectl-ai "deploy the todo frontend with 2 replicas"
+kubectl-ai "scale the backend to handle more load"
+kubectl-ai "check why the pods are failing"
+```
+
+### kagent
+
+```bash
+# Cluster health analysis
+kagent analyze "check cluster health"
+
+# Resource optimization
+kagent optimize "analyze resource allocation"
+```
+
+See [ai-tools.md](./ai-tools.md) for detailed documentation and examples.
+
+**Manual Fallbacks**: All AI tool commands have equivalent kubectl commands documented in the respective sections above.
+
+---
+
 ## Additional Resources
 
 - [kind Documentation](https://kind.sigs.k8s.io/)
 - [Helm Documentation](https://helm.sh/docs/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+- [AI Tools Guide](./ai-tools.md)
 
 ---
 

@@ -1,0 +1,77 @@
+# =============================================================================
+# Backend Deployment - Todo AI Chatbot
+# =============================================================================
+# Alternative to Helm chart - hardcoded Kubernetes manifest
+# Usage: kubectl apply -f k8s/backend/
+#
+# Prerequisites:
+#   1. Create secrets: kubectl apply -f k8s/backend/secrets.yaml
+#   2. Build and load image: kind load docker-image todo-backend:latest
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend
+  labels:
+    app: todo-backend
+    component: backend
+    part-of: todo-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+        component: backend
+    spec:
+      containers:
+        - name: backend
+          image: todo-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          # Environment variables from ConfigMap and Secrets
+          envFrom:
+            - configMapRef:
+                name: todo-backend-config
+            - secretRef:
+                name: todo-backend-secrets
+
+          # Liveness probe - is the container running?
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          # Readiness probe - is the container ready to serve traffic?
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Resource limits and requests
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+      # Restart policy
+      restartPolicy: Always

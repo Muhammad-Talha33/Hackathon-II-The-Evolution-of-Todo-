@@ -184,13 +184,13 @@ This is a web application deployment project with:
 
 ### Kubernetes Manifests (Alternative to Helm)
 
-- [ ] T074 [P] [US4] Create `k8s/backend/deployment.yaml` with hardcoded backend Deployment manifest
-- [ ] T075 [P] [US4] Create `k8s/backend/service.yaml` with backend Service manifest
-- [ ] T076 [P] [US4] Create `k8s/backend/secrets.yaml.example` as template (user fills base64 values)
-- [ ] T077 [P] [US4] Create `k8s/frontend/deployment.yaml` with frontend Deployment manifest
-- [ ] T078 [P] [US4] Create `k8s/frontend/service.yaml` with frontend Service manifest (NodePort)
-- [ ] T079 [P] [US4] Create `k8s/frontend/configmap.yaml` with frontend ConfigMap
-- [ ] T080 [US4] Document kubectl apply workflow in `docs/deployment/kubernetes.md` as Helm alternative
+- [x] T074 [P] [US4] Create `k8s/backend/deployment.yaml` with hardcoded backend Deployment manifest
+- [x] T075 [P] [US4] Create `k8s/backend/service.yaml` with backend Service manifest
+- [x] T076 [P] [US4] Create `k8s/backend/secrets.yaml.example` as template (user fills base64 values)
+- [x] T077 [P] [US4] Create `k8s/frontend/deployment.yaml` with frontend Deployment manifest
+- [x] T078 [P] [US4] Create `k8s/frontend/service.yaml` with frontend Service manifest (NodePort)
+- [x] T079 [P] [US4] Create `k8s/frontend/configmap.yaml` with frontend ConfigMap
+- [x] T080 [US4] Document kubectl apply workflow in `docs/deployment/kubernetes.md` as Helm alternative
 
 **Checkpoint US4**: Helm lifecycle validated, alternative kubectl manifests created
 
@@ -206,14 +206,14 @@ This is a web application deployment project with:
 
 ### AI Tools Documentation
 
-- [ ] T081 [P] [US3] Document kubectl-ai installation in `docs/deployment/ai-tools.md`: `pip install kubectl-ai`
-- [ ] T082 [P] [US3] Document kubectl-ai example: "deploy the todo frontend with 2 replicas" → expected kubectl command
-- [ ] T083 [P] [US3] Document kubectl-ai example: "scale the backend to handle more load" → expected scaling command
-- [ ] T084 [P] [US3] Document kubectl-ai example: "check why the pods are failing" → expected diagnostic steps
-- [ ] T085 [P] [US3] Document kagent installation and usage in `docs/deployment/ai-tools.md`
-- [ ] T086 [P] [US3] Document kagent example: "analyze the cluster health" → expected health report format
-- [ ] T087 [P] [US3] Document kagent example: "optimize resource allocation" → expected recommendations
-- [ ] T088 [US3] Add AI tools section to `docs/deployment/kubernetes.md` with fallback to manual commands
+- [x] T081 [P] [US3] Document kubectl-ai installation in `docs/deployment/ai-tools.md`: `pip install kubectl-ai`
+- [x] T082 [P] [US3] Document kubectl-ai example: "deploy the todo frontend with 2 replicas" → expected kubectl command
+- [x] T083 [P] [US3] Document kubectl-ai example: "scale the backend to handle more load" → expected scaling command
+- [x] T084 [P] [US3] Document kubectl-ai example: "check why the pods are failing" → expected diagnostic steps
+- [x] T085 [P] [US3] Document kagent installation and usage in `docs/deployment/ai-tools.md`
+- [x] T086 [P] [US3] Document kagent example: "analyze the cluster health" → expected health report format
+- [x] T087 [P] [US3] Document kagent example: "optimize resource allocation" → expected recommendations
+- [x] T088 [US3] Add AI tools section to `docs/deployment/kubernetes.md` with fallback to manual commands
 
 **Checkpoint US3**: AI tools documented with examples (implementation optional)
 
@@ -225,28 +225,28 @@ This is a web application deployment project with:
 
 ### Deployment Automation Scripts
 
-- [ ] T089 [P] Create `scripts/build-images.sh` to build both backend and frontend images with error handling
-- [ ] T090 [P] Create `scripts/build-images.ps1` (PowerShell version for Windows)
-- [ ] T091 [P] Create `scripts/deploy-compose.sh` to start Docker Compose with validation checks
-- [ ] T092 [P] Create `scripts/deploy-compose.ps1` (PowerShell version)
-- [ ] T093 [P] Create `scripts/deploy-k8s.sh` to deploy both Helm charts with kind cluster creation
-- [ ] T094 [P] Create `scripts/deploy-k8s.ps1` (PowerShell version)
-- [ ] T095 [P] Create `scripts/validate-env.sh` to check prerequisites (Docker, kubectl, Helm, kind) and secrets
+- [x] T089 [P] Create `scripts/build-images.sh` to build both backend and frontend images with error handling
+- [x] T090 [P] Create `scripts/build-images.ps1` (PowerShell version for Windows)
+- [x] T091 [P] Create `scripts/deploy-compose.sh` to start Docker Compose with validation checks
+- [x] T092 [P] Create `scripts/deploy-compose.ps1` (PowerShell version)
+- [x] T093 [P] Create `scripts/deploy-k8s.sh` to deploy both Helm charts with kind cluster creation
+- [x] T094 [P] Create `scripts/deploy-k8s.ps1` (PowerShell version)
+- [x] T095 [P] Create `scripts/validate-env.sh` to check prerequisites (Docker, kubectl, Helm, kind) and secrets
 - [ ] T096 [P] Make all shell scripts executable: `chmod +x scripts/*.sh`
 
 ### Comprehensive Documentation
 
-- [ ] T097 [P] Create `docs/deployment/docker-compose.md` with complete Docker Compose guide (Track A)
-- [ ] T098 [P] Expand `docs/deployment/kubernetes.md` with complete kind/Helm guide (Track B)
-- [ ] T099 [P] Create `docs/deployment/troubleshooting.md` with common issues and solutions for both tracks
-- [ ] T100 [P] Create `docs/architecture/containerization.md` documenting deployment architecture decisions
+- [x] T097 [P] Create `docs/deployment/docker-compose.md` with complete Docker Compose guide (Track A)
+- [x] T098 [P] Expand `docs/deployment/kubernetes.md` with complete kind/Helm guide (Track B)
+- [x] T099 [P] Create `docs/deployment/troubleshooting.md` with common issues and solutions for both tracks
+- [x] T100 [P] Create `docs/architecture/containerization.md` documenting deployment architecture decisions
 - [ ] T101 Update `README.md` "Deployment" section with quick links to both deployment tracks
 
 ### Security & Best Practices
 
-- [ ] T102 [P] Verify `.gitignore` covers all secret files: `.env`, `values-local.yaml`, `*-secrets.yaml`
-- [ ] T103 [P] Add security scanning to Dockerfiles: Include `HEALTHCHECK` and run as non-root user where possible
-- [ ] T104 [P] Document secrets rotation procedure in `docs/deployment/secrets-management.md`
+- [x] T102 [P] Verify `.gitignore` covers all secret files: `.env`, `values-local.yaml`, `*-secrets.yaml`
+- [x] T103 [P] Add security scanning to Dockerfiles: Include `HEALTHCHECK` and run as non-root user where possible
+- [x] T104 [P] Document secrets rotation procedure in `docs/deployment/secrets-management.md`
 - [ ] T105 Validate that Phase III code is unchanged: `git status backend/ frontend/` shows no modifications
 
 ### End-to-End Validation

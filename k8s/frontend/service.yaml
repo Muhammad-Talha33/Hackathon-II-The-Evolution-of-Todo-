@@ -1,0 +1,24 @@
+# =============================================================================
+# Frontend Service - Todo AI Chatbot
+# =============================================================================
+# Exposes the frontend deployment via NodePort for external access
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-frontend
+  labels:
+    app: todo-frontend
+    component: frontend
+    part-of: todo-chatbot
+spec:
+  type: NodePort
+  selector:
+    app: todo-frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      nodePort: 30080
+      protocol: TCP

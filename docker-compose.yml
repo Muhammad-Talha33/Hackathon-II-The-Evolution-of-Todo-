@@ -70,8 +70,8 @@ services:
       context: ./frontend
       dockerfile: ../docker/frontend/Dockerfile
       args:
-        # Build-time environment variable for API URL
-        - NEXT_PUBLIC_API_URL=http://backend:8000
+        # Build-time environment variable for API URL (must be localhost for browser access)
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
     image: todo-frontend:latest
     container_name: todo-frontend
     restart: unless-stopped
@@ -81,7 +81,7 @@ services:
 
     # Runtime environment variables
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NODE_ENV=production
 
     # Wait for backend to be healthy before starting

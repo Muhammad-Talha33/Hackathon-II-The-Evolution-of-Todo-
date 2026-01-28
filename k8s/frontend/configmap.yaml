@@ -1,0 +1,18 @@
+# =============================================================================
+# Frontend ConfigMap - Todo AI Chatbot
+# =============================================================================
+# Non-sensitive configuration for the Next.js frontend
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-frontend-config
+  labels:
+    app: todo-frontend
+data:
+  # API URL for browser access (must be accessible from user's browser)
+  # For local kind cluster with port forwarding: http://localhost:8000
+  # For NodePort access: http://<node-ip>:30000
+  NEXT_PUBLIC_API_URL: "http://localhost:8000"
+  NODE_ENV: "production"
