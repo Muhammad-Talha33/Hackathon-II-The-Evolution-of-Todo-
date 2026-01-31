@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Dependencies - Install Node modules
 # =============================================================================
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 
 LABEL maintainer="Todo AI Chatbot Team"
 LABEL description="Multi-stage build for Next.js frontend"
@@ -15,13 +15,13 @@ RUN apk add --no-cache libc6-compat
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies (production only for smaller image)
-RUN npm ci --only=production
+# Install ALL dependencies (devDependencies needed for build)
+RUN npm ci
 
 # =============================================================================
 # Stage 2: Builder - Build Next.js application
 # =============================================================================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ RUN npm run build
 # =============================================================================
 # Stage 3: Runtime - Minimal production image
 # =============================================================================
-FROM node:18-alpine
+FROM node:20-alpine
 
 LABEL maintainer="Todo AI Chatbot Team"
 LABEL description="Next.js frontend for Todo AI Chatbot"
@@ -75,7 +75,7 @@ ENV NODE_ENV=production \
 
 # Health check - verify Next.js server is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD node -e "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
 # Start Next.js server
 CMD ["node", "server.js"]

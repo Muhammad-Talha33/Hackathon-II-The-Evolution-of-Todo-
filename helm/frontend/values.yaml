@@ -127,10 +127,13 @@ podAnnotations: {}
 # Security Context (Optional)
 # ==============================================================================
 # Uncomment if using non-root user in Dockerfile
-securityContext:
-  runAsNonRoot: true   # Frontend Dockerfile creates nextjs user (uid 1001)
+podSecurityContext:
+  runAsNonRoot: true   # Frontend Dockerfile creates nextjs user (uid 1001, gid 65533/nogroup)
   runAsUser: 1001
-  fsGroup: 1001
+  fsGroup: 65533
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL

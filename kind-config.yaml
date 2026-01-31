@@ -1,0 +1,22 @@
+# kind cluster configuration for Todo AI Chatbot
+# Maps NodePort 30080 from kind container to host for frontend access
+#
+# Usage:
+#   kind create cluster --name todo-local --config kind-config.yaml
+#
+# Delete existing cluster first if needed:
+#   kind delete cluster --name todo-local
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Frontend NodePort mapping (http://localhost:30080)
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP
+      # Backend port-forward target (used with kubectl port-forward)
+      - containerPort: 30800
+        hostPort: 30800
+        protocol: TCP

@@ -570,6 +570,86 @@ readinessProbe:
 - Increment chart version on every change
 - Tag app version separately from chart version
 
+### Helm Upgrade Best Practices
+
+1. **Always use `--dry-run` before upgrading**:
+   ```bash
+   # Preview changes before applying
+   helm upgrade todo-backend ./helm/backend -f helm/backend/values-local.yaml --dry-run --debug
+   ```
+
+2. **Use values files over `--set` for reproducibility**:
+   ```bash
+   # Preferred: values file (version-controlled, reviewable)
+   helm upgrade todo-backend ./helm/backend -f helm/backend/values-local.yaml
+
+   # Acceptable for quick overrides (not persisted)
+   helm upgrade todo-backend ./helm/backend --set replicaCount=2
+   ```
+
+3. **Check release history before and after upgrades**:
+   ```bash
+   helm history todo-backend
+   # Shows revision history with status, timestamps, and descriptions
+   ```
+
+### Helm Rollback Best Practices
+
+1. **Rollback to previous revision on failure**:
+   ```bash
+   # Rollback to the immediately previous revision
+   helm rollback todo-backend
+
+   # Rollback to a specific revision number
+   helm rollback todo-backend 1
+   ```
+
+2. **Verify rollback success**:
+   ```bash
+   # Check pods are running with previous config
+   kubectl get pods -l app=todo-backend
+   kubectl describe deployment todo-backend
+
+   # Confirm revision in history
+   helm history todo-backend
+   ```
+
+3. **Set `--wait` and `--timeout` for safer upgrades**:
+   ```bash
+   # Wait for pods to be ready before marking upgrade as successful
+   helm upgrade todo-backend ./helm/backend -f helm/backend/values-local.yaml \
+     --wait --timeout 120s
+
+   # If pods don't become ready within timeout, upgrade is marked failed
+   # and can be rolled back
+   ```
+
+### Helm Values Override Patterns
+
+Values are merged with this precedence (highest to lowest):
+
+1. `--set` flags (highest priority)
+2. `-f values-local.yaml` (override file)
+3. `values.yaml` in chart (defaults)
+
+```bash
+# Override a single value
+helm upgrade todo-backend ./helm/backend --set replicaCount=3
+
+# Override nested values
+helm upgrade todo-backend ./helm/backend --set image.tag=v2.0.0
+
+# Combine values file with --set overrides
+helm upgrade todo-backend ./helm/backend \
+  -f helm/backend/values-local.yaml \
+  --set replicaCount=2
+
+# Multiple --set flags
+helm upgrade todo-backend ./helm/backend \
+  --set replicaCount=2 \
+  --set config.logLevel=DEBUG
+```
+
 ---
 
 ## Cleanup

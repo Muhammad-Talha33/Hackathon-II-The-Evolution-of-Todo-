@@ -169,16 +169,26 @@ helm install todo-frontend ./helm/frontend
 
 ### Deployment Resources
 
-- **Prerequisites**: `docs/deployment/prerequisites.md` - Required tools and installation
-- **Troubleshooting**: `docs/deployment/troubleshooting.md` - Common issues and solutions
-- **Quick Start Guide**: `specs/004-phase4-local-k8s/quickstart.md` - Step-by-step deployment
-- **Architecture**: `specs/004-phase4-local-k8s/plan.md` - Deployment design and decisions
+| Guide | Description |
+|-------|-------------|
+| [Prerequisites](docs/deployment/prerequisites.md) | Required tools and installation |
+| [Docker Compose Guide](docs/deployment/docker-compose.md) | Complete Track A deployment guide |
+| [Kubernetes Guide](docs/deployment/kubernetes.md) | Complete Track B (kind + Helm) guide |
+| [Troubleshooting](docs/deployment/troubleshooting.md) | Common issues and solutions |
+| [Secrets Management](docs/deployment/secrets-management.md) | Secret rotation and security |
+| [Validation Checklist](docs/deployment/validation.md) | Deployment verification checklist |
+| [AI Tools](docs/deployment/ai-tools.md) | kubectl-ai and kagent usage |
+| [Architecture](docs/architecture/containerization.md) | Container architecture decisions |
+| [Quick Start](specs/004-phase4-local-k8s/quickstart.md) | Step-by-step deployment |
 
-### SLAT Limitation Notice
+### Automation Scripts
 
-**Important**: Minikube cannot run on current hardware due to SLAT (Second Level Address Translation) limitation. This deployment uses:
-- **Docker Compose** for immediate local deployment
-- **kind** (Kubernetes in Docker) as Minikube alternative - runs K8s without hypervisor/SLAT requirement
+| Script | Description |
+|--------|-------------|
+| `scripts/build-images.sh` / `.ps1` | Build Docker images for both services |
+| `scripts/deploy-compose.sh` / `.ps1` | Deploy via Docker Compose (Track A) |
+| `scripts/deploy-k8s.sh` / `.ps1` | Deploy via kind + Helm (Track B) |
+| `scripts/validate-env.sh` | Check prerequisites and environment |
 
 ---
 

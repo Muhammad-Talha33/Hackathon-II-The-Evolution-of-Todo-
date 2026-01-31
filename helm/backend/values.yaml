@@ -136,10 +136,13 @@ podAnnotations: {}
 # Security Context (Optional)
 # ==============================================================================
 # Uncomment if using non-root user in Dockerfile
-securityContext:
+podSecurityContext:
   runAsNonRoot: true   # Backend Dockerfile creates appuser (uid 1000)
   runAsUser: 1000
   fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
