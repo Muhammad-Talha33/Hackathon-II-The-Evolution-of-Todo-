@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
 import Cookies from "js-cookie";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTaskRefresh } from "@/contexts/TaskRefreshContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,7 +23,18 @@ export default function ChatWidget() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated } = useAuth();
   const { refreshTasks } = useTaskRefresh();
+
+  // Reset chat state on logout so messages don't persist across accounts
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsOpen(false);
+      setMessages([]);
+      setConversationId(null);
+      setError(null);
+    }
+  }, [isAuthenticated]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -100,10 +112,9 @@ export default function ChatWidget() {
     }
   };
 
-  // Check if user is authenticated
-  const token = Cookies.get("access_token");
-  if (!token) {
-    return null; // Don't show widget if not authenticated
+  // Don't render widget until client-side auth check completes
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

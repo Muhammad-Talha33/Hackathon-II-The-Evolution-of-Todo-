@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Task, TaskCreate } from '@/lib/api';
+import { api, Task, TaskCreate, TaskUpdate, TaskQueryParams } from '@/lib/api';
 import { useTaskRefresh } from '@/contexts/TaskRefreshContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,16 +19,31 @@ export default function TasksPage() {
   // New task form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newTaskTags, setNewTaskTags] = useState('');
+  const [newTaskDueAt, setNewTaskDueAt] = useState('');
+  const [newTaskRemindAt, setNewTaskRemindAt] = useState('');
+  const [newTaskRecurrence, setNewTaskRecurrence] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   // Edit task state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editPriority, setEditPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [editTags, setEditTags] = useState('');
+  const [editDueAt, setEditDueAt] = useState('');
+  const [editRemindAt, setEditRemindAt] = useState('');
+  const [editRecurrence, setEditRecurrence] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Filter state
+  // Filter, search, sort state
   const [filter, setFilter] = useState<'all' | 'incomplete' | 'complete'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'due_date' | 'priority'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [priorityFilter, setPriorityFilter] = useState<string>('');
 
   // Redirect to signin if not authenticated
   useEffect(() => {
@@ -37,12 +52,12 @@ export default function TasksPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Fetch tasks on mount
+  // Fetch tasks on mount and when filters change
   useEffect(() => {
     if (isAuthenticated) {
       fetchTasks();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, filter, sortBy, sortOrder, priorityFilter]);
 
   // Listen for task changes from ChatWidget
   useEffect(() => {
@@ -64,7 +79,14 @@ export default function TasksPage() {
         router.push('/auth/signin');
         return;
       }
-      const data = await api.getTasks(accessToken);
+      const params: TaskQueryParams = {
+        sort_by: sortBy,
+        order: sortOrder,
+      };
+      if (filter !== 'all') params.status = filter;
+      if (priorityFilter) params.priority = priorityFilter;
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+      const data = await api.getTasks(accessToken, params);
       setTasks(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
@@ -90,9 +112,22 @@ export default function TasksPage() {
         return;
       }
 
+      const parsedTags = newTaskTags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      // datetime-local gives "YYYY-MM-DDTHH:mm" — append ":00" for ISO 8601
+      const formatDt = (v: string) => v ? (v.length === 16 ? v + ':00' : v) : undefined;
+
       const newTask: TaskCreate = {
         title: newTaskTitle,
         description: newTaskDescription || undefined,
+        priority: newTaskPriority,
+        tags: parsedTags.length > 0 ? parsedTags : undefined,
+        due_at: formatDt(newTaskDueAt),
+        remind_at: formatDt(newTaskRemindAt),
+        recurrence_pattern: (newTaskRecurrence as 'daily' | 'weekly' | 'monthly') || undefined,
       };
 
       await api.createTask(accessToken, newTask);
@@ -100,6 +135,12 @@ export default function TasksPage() {
       // Clear form
       setNewTaskTitle('');
       setNewTaskDescription('');
+      setNewTaskPriority('medium');
+      setNewTaskTags('');
+      setNewTaskDueAt('');
+      setNewTaskRemindAt('');
+      setNewTaskRecurrence('');
+      setShowAdvanced(false);
 
       // Refresh task list
       await fetchTasks();
@@ -163,12 +204,22 @@ export default function TasksPage() {
     setEditingTaskId(task.id);
     setEditTitle(task.title);
     setEditDescription(task.description || '');
+    setEditPriority((task.priority as 'low' | 'medium' | 'high') || 'medium');
+    setEditTags(task.tags?.join(', ') || '');
+    setEditDueAt(task.due_at ? task.due_at.slice(0, 16) : '');
+    setEditRemindAt(task.remind_at ? task.remind_at.slice(0, 16) : '');
+    setEditRecurrence(task.recurrence_pattern || '');
   };
 
   const handleCancelEdit = () => {
     setEditingTaskId(null);
     setEditTitle('');
     setEditDescription('');
+    setEditPriority('medium');
+    setEditTags('');
+    setEditDueAt('');
+    setEditRemindAt('');
+    setEditRecurrence('');
   };
 
   const handleUpdateTask = async (taskId: string) => {
@@ -186,15 +237,27 @@ export default function TasksPage() {
         return;
       }
 
-      await api.updateTask(accessToken, taskId, {
+      const parsedEditTags = editTags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      const formatDt = (v: string) => v ? (v.length === 16 ? v + ':00' : v) : undefined;
+
+      const updateData: TaskUpdate = {
         title: editTitle,
         description: editDescription || undefined,
-      });
+        priority: editPriority,
+        tags: parsedEditTags,
+        due_at: formatDt(editDueAt),
+        remind_at: formatDt(editRemindAt),
+        recurrence_pattern: (editRecurrence as 'daily' | 'weekly' | 'monthly') || undefined,
+      };
+
+      await api.updateTask(accessToken, taskId, updateData);
 
       // Reset edit state
-      setEditingTaskId(null);
-      setEditTitle('');
-      setEditDescription('');
+      handleCancelEdit();
 
       // Refresh task list
       await fetchTasks();
@@ -205,17 +268,19 @@ export default function TasksPage() {
     }
   };
 
-  // Filter tasks
-  const filteredTasks = tasks.filter(task => {
-    if (filter === 'complete') return task.status === 'complete';
-    if (filter === 'incomplete') return task.status === 'incomplete';
-    return true;
-  });
-
-  // Stats
+  // Tasks are already filtered by the backend based on query params.
+  // Stats are computed from current result set.
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'complete').length;
   const incompleteTasks = tasks.filter(t => t.status === 'incomplete').length;
+
+  // Debounced search handler
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isAuthenticated) fetchTasks();
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   // Show loading while checking auth
   if (authLoading) {
@@ -462,11 +527,98 @@ export default function TasksPage() {
                   id="description"
                   value={newTaskDescription}
                   onChange={(e) => setNewTaskDescription(e.target.value)}
-                  rows={3}
+                  rows={2}
                   className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
                   placeholder="Add more details about this task..."
                 />
               </div>
+
+              {/* Priority & Tags row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+                    Priority
+                  </label>
+                  <select
+                    id="priority"
+                    value={newTaskPriority}
+                    onChange={(e) => setNewTaskPriority(e.target.value as 'low' | 'medium' | 'high')}
+                    className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
+                    Tags <span className="text-gray-500 font-normal">(comma-separated)</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="tags"
+                    value={newTaskTags}
+                    onChange={(e) => setNewTaskTags(e.target.value)}
+                    className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                    placeholder="e.g. work, urgent, shopping"
+                  />
+                </div>
+              </div>
+
+              {/* Advanced Options Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+              >
+                {showAdvanced ? 'Hide advanced options' : 'Show advanced options (due date, reminder, recurrence)'}
+              </button>
+
+              {showAdvanced && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <label htmlFor="dueAt" className="block text-sm font-medium text-gray-700">
+                      Due Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="dueAt"
+                      value={newTaskDueAt}
+                      onChange={(e) => setNewTaskDueAt(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="remindAt" className="block text-sm font-medium text-gray-700">
+                      Reminder
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="remindAt"
+                      value={newTaskRemindAt}
+                      onChange={(e) => setNewTaskRemindAt(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="recurrence" className="block text-sm font-medium text-gray-700">
+                      Recurrence
+                    </label>
+                    <select
+                      id="recurrence"
+                      value={newTaskRecurrence}
+                      onChange={(e) => setNewTaskRecurrence(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                    >
+                      <option value="">None</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <button
                   type="submit"
@@ -522,41 +674,98 @@ export default function TasksPage() {
 
         {/* Task List */}
         <div className="bg-white rounded-2xl shadow-xl p-4 md:p-6 border border-gray-100">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Your Tasks</h2>
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tasks by title or description..."
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+              />
+            </div>
+          </div>
 
-            {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  filter === 'all'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                All ({totalTasks})
-              </button>
-              <button
-                onClick={() => setFilter('incomplete')}
-                className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  filter === 'incomplete'
-                    ? 'bg-yellow-100 text-yellow-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                Active ({incompleteTasks})
-              </button>
-              <button
-                onClick={() => setFilter('complete')}
-                className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  filter === 'complete'
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                Done ({completedTasks})
-              </button>
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Filter Tabs row */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <h2 className="text-xl font-semibold text-gray-900">Your Tasks</h2>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    filter === 'all'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  All ({totalTasks})
+                </button>
+                <button
+                  onClick={() => setFilter('incomplete')}
+                  className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    filter === 'incomplete'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Active ({incompleteTasks})
+                </button>
+                <button
+                  onClick={() => setFilter('complete')}
+                  className={`px-3 md:px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    filter === 'complete'
+                      ? 'bg-green-100 text-green-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Done ({completedTasks})
+                </button>
+              </div>
+            </div>
+
+            {/* Sort & Priority Filter row */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Sort</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'created_at' | 'due_date' | 'priority')}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="created_at">Date Created</option>
+                  <option value="due_date">Due Date</option>
+                  <option value="priority">Priority</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                  className="p-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-all"
+                  title={sortOrder === 'desc' ? 'Descending' : 'Ascending'}
+                >
+                  {sortOrder === 'desc' ? (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</label>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -583,7 +792,7 @@ export default function TasksPage() {
               </svg>
               <p className="mt-4 text-gray-600">Loading tasks...</p>
             </div>
-          ) : filteredTasks.length === 0 ? (
+          ) : tasks.length === 0 ? (
             <div className="text-center py-12">
               <svg
                 className="h-16 w-16 text-gray-300 mx-auto mb-4"
@@ -599,7 +808,9 @@ export default function TasksPage() {
                 />
               </svg>
               <p className="text-gray-500 text-lg">
-                {filter === 'all'
+                {searchQuery.trim()
+                  ? 'No tasks match your search.'
+                  : filter === 'all'
                   ? 'No tasks yet. Create your first task above!'
                   : filter === 'complete'
                   ? 'No completed tasks yet. Keep working!'
@@ -610,7 +821,7 @@ export default function TasksPage() {
           ) : (
             <div className="space-y-3">
               <AnimatePresence mode="popLayout">
-                {filteredTasks.map((task) => (
+                {tasks.map((task) => (
                   <motion.div
                     key={task.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -628,28 +839,81 @@ export default function TasksPage() {
                     // Edit mode
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Task Title
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
                         <input
                           type="text"
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
                           placeholder="Enter task title"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Description
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                         <textarea
                           value={editDescription}
                           onChange={(e) => setEditDescription(e.target.value)}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                          rows={2}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
                           placeholder="Enter task description"
                         />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                          <select
+                            value={editPriority}
+                            onChange={(e) => setEditPriority(e.target.value as 'low' | 'medium' | 'high')}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                          >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
+                          <input
+                            type="text"
+                            value={editTags}
+                            onChange={(e) => setEditTags(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                            placeholder="e.g. work, urgent"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                          <input
+                            type="datetime-local"
+                            value={editDueAt}
+                            onChange={(e) => setEditDueAt(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Reminder</label>
+                          <input
+                            type="datetime-local"
+                            value={editRemindAt}
+                            onChange={(e) => setEditRemindAt(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence</label>
+                          <select
+                            value={editRecurrence}
+                            onChange={(e) => setEditRecurrence(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                          >
+                            <option value="">None</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                          </select>
+                        </div>
                       </div>
                       <div className="flex gap-3">
                         <button
@@ -700,6 +964,7 @@ export default function TasksPage() {
                             </p>
                           )}
                           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                            {/* Status badge */}
                             <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-medium ${
                               task.status === 'complete'
                                 ? 'bg-green-100 text-green-700'
@@ -721,6 +986,50 @@ export default function TasksPage() {
                                 </>
                               )}
                             </span>
+
+                            {/* Priority badge */}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                              task.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {(task.priority || 'medium').charAt(0).toUpperCase() + (task.priority || 'medium').slice(1)}
+                            </span>
+
+                            {/* Due date */}
+                            {task.due_at && (
+                              <span className={`flex items-center ${
+                                new Date(task.due_at) < new Date() && task.status !== 'complete'
+                                  ? 'text-red-600 font-medium' : 'text-gray-500'
+                              }`}>
+                                <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Due {new Date(task.due_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+
+                            {/* Recurrence indicator */}
+                            {task.recurrence_pattern && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                {task.recurrence_pattern}
+                              </span>
+                            )}
+
+                            {/* Reminder indicator */}
+                            {task.remind_at && !task.reminder_sent && (
+                              <span className="inline-flex items-center text-blue-600">
+                                <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                Reminder
+                              </span>
+                            )}
+
+                            {/* Created date */}
                             <span className="flex items-center">
                               <svg className="h-3 w-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
@@ -734,6 +1043,20 @@ export default function TasksPage() {
                               </span>
                             </span>
                           </div>
+
+                          {/* Tags */}
+                          {task.tags && task.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {task.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-2 md:ml-4 flex-shrink-0">
