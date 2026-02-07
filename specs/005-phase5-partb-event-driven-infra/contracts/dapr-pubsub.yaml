@@ -1,0 +1,104 @@
+# Dapr Pub/Sub API Contract
+# Defines the HTTP API for publishing events via Dapr sidecar
+
+openapi: 3.0.3
+info:
+  title: Dapr Pub/Sub API
+  description: Event publication endpoint via Dapr sidecar
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3500
+    description: Dapr sidecar (local)
+
+paths:
+  /v1.0/publish/{pubsubname}/{topic}:
+    post:
+      summary: Publish event to topic
+      description: |
+        Publishes a CloudEvents-formatted message to the specified topic.
+        Used by backend to publish all task domain events.
+      operationId: publishEvent
+      parameters:
+        - name: pubsubname
+          in: path
+          required: true
+          schema:
+            type: string
+            example: taskpubsub
+          description: Name of the pub/sub component
+        - name: topic
+          in: path
+          required: true
+          schema:
+            type: string
+            example: tasks
+          description: Topic to publish to
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventPayload'
+            examples:
+              TaskCreated:
+                summary: TaskCreated event
+                value:
+                  event_type: TaskCreated
+                  task_id: "550e8400-e29b-41d4-a716-446655440000"
+                  user_id: "550e8400-e29b-41d4-a716-446655440001"
+                  title: "Buy groceries"
+                  priority: "high"
+                  tags: ["shopping", "urgent"]
+                  due_at: "2026-02-07T10:00:00Z"
+                  recurrence_pattern: null
+                  created_at: "2026-02-06T10:00:00Z"
+                  timestamp: "2026-02-06T10:00:00Z"
+              TaskCompleted:
+                summary: TaskCompleted event
+                value:
+                  event_type: TaskCompleted
+                  task_id: "550e8400-e29b-41d4-a716-446655440000"
+                  user_id: "550e8400-e29b-41d4-a716-446655440001"
+                  title: "Buy groceries"
+                  completed_at: "2026-02-06T15:00:00Z"
+                  had_recurrence: false
+                  was_overdue: false
+                  timestamp: "2026-02-06T15:00:00Z"
+      responses:
+        '204':
+          description: Event published successfully
+        '400':
+          description: Invalid request
+        '500':
+          description: Dapr sidecar error
+
+components:
+  schemas:
+    EventPayload:
+      type: object
+      required:
+        - event_type
+        - timestamp
+      properties:
+        event_type:
+          type: string
+          enum:
+            - TaskCreated
+            - TaskUpdated
+            - TaskCompleted
+            - TaskDeleted
+            - TaskReminderDue
+            - RecurringTaskGenerated
+        task_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      additionalProperties: true

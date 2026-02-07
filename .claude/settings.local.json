@@ -10,7 +10,8 @@
       "Bash(call venvScriptsactivate)",
       "Bash(python -m uvicorn:*)",
       "Bash(curl:*)",
-      "Bash(\"venv\\\\Scripts\\\\python.exe\" -m uvicorn src.main:app --reload --port 8000)"
+      "Bash(\"venv\\\\Scripts\\\\python.exe\" -m uvicorn src.main:app --reload --port 8000)",
+      "Bash(ls:*)"
     ]
   }
 }

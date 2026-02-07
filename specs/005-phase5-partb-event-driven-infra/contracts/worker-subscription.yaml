@@ -1,0 +1,225 @@
+# Worker Subscription API Contract
+# Defines the HTTP endpoints that workers expose for Dapr event delivery
+
+openapi: 3.0.3
+info:
+  title: Worker Subscription API
+  description: Event subscription endpoints for Dapr workers
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8001
+    description: Reminder Worker
+  - url: http://localhost:8002
+    description: Recurrence Worker
+
+paths:
+  /dapr/subscribe:
+    get:
+      summary: Get subscription list
+      description: |
+        Returns the list of topics this worker subscribes to.
+        Called by Dapr sidecar during startup.
+      operationId: getSubscriptions
+      responses:
+        '200':
+          description: Subscription list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+              examples:
+                ReminderWorker:
+                  summary: Reminder worker subscriptions
+                  value:
+                    - pubsubname: taskpubsub
+                      topic: tasks
+                      route: /events/task-reminder-due
+                RecurrenceWorker:
+                  summary: Recurrence worker subscriptions
+                  value:
+                    - pubsubname: taskpubsub
+                      topic: tasks
+                      route: /events/recurring-task-generated
+
+  /events/task-reminder-due:
+    post:
+      summary: Handle TaskReminderDue event
+      description: |
+        Receives TaskReminderDue events from Dapr.
+        Logs the reminder delivery (stub for notifications).
+      operationId: handleTaskReminderDue
+      tags:
+        - Reminder Worker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudEvent'
+            example:
+              specversion: "1.0"
+              type: com.todo.TaskReminderDue
+              source: backend
+              id: "123e4567-e89b-12d3-a456-426614174000"
+              time: "2026-02-06T10:00:00Z"
+              datacontenttype: application/json
+              data:
+                event_type: TaskReminderDue
+                task_id: "550e8400-e29b-41d4-a716-446655440000"
+                user_id: "550e8400-e29b-41d4-a716-446655440001"
+                title: "Buy groceries"
+                remind_at: "2026-02-06T09:00:00Z"
+                due_at: "2026-02-06T10:00:00Z"
+                timestamp: "2026-02-06T10:00:00Z"
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DaprResponse'
+              example:
+                status: SUCCESS
+        '400':
+          description: Invalid event (will not be retried)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DaprResponse'
+              example:
+                status: DROP
+
+  /events/recurring-task-generated:
+    post:
+      summary: Handle RecurringTaskGenerated event
+      description: |
+        Receives RecurringTaskGenerated events from Dapr.
+        Creates the next task instance in the database.
+      operationId: handleRecurringTaskGenerated
+      tags:
+        - Recurrence Worker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudEvent'
+            example:
+              specversion: "1.0"
+              type: com.todo.RecurringTaskGenerated
+              source: backend
+              id: "123e4567-e89b-12d3-a456-426614174001"
+              time: "2026-02-06T10:00:00Z"
+              datacontenttype: application/json
+              data:
+                event_type: RecurringTaskGenerated
+                new_task_id: "550e8400-e29b-41d4-a716-446655440002"
+                parent_task_id: "550e8400-e29b-41d4-a716-446655440000"
+                user_id: "550e8400-e29b-41d4-a716-446655440001"
+                title: "Daily standup"
+                next_due_at: "2026-02-07T09:00:00Z"
+                recurrence_pattern: daily
+                timestamp: "2026-02-06T10:00:00Z"
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DaprResponse'
+              example:
+                status: SUCCESS
+        '500':
+          description: Processing failed (will be retried)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DaprResponse'
+              example:
+                status: RETRY
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns worker health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Worker is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+
+components:
+  schemas:
+    Subscription:
+      type: object
+      required:
+        - pubsubname
+        - topic
+        - route
+      properties:
+        pubsubname:
+          type: string
+          example: taskpubsub
+        topic:
+          type: string
+          example: tasks
+        route:
+          type: string
+          example: /events/task-reminder-due
+
+    CloudEvent:
+      type: object
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - data
+      properties:
+        specversion:
+          type: string
+          example: "1.0"
+        type:
+          type: string
+          example: com.todo.TaskReminderDue
+        source:
+          type: string
+          example: backend
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          example: application/json
+        data:
+          type: object
+          additionalProperties: true
+
+    DaprResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+            - RETRY
+            - DROP
+          description: |
+            SUCCESS - Event processed, acknowledge to Kafka
+            RETRY - Processing failed, Dapr should retry
+            DROP - Invalid event, do not retry

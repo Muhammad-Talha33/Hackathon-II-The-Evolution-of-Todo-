@@ -1,0 +1,18 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: taskpubsub
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    - name: brokers
+      value: "redpanda:9092"
+    - name: consumerGroup
+      value: "todo-consumers"
+    - name: clientID
+      value: "todo-backend"
+    - name: authType
+      value: "none"
+    - name: disableTls
+      value: "true"

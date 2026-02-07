@@ -85,7 +85,10 @@ values-*.local.yaml
 *-secrets.yaml
 *-secrets.env
 *.secret.yaml
+# Exclude secrets directories (but allow dapr/secrets/ for empty placeholder)
 secrets/
+!dapr/secrets/
+!dapr/secrets/secrets.json
 .kube/
 kubeconfig*
 *.key
@@ -96,3 +99,4 @@ helm/*/values-local.yaml
 docker-compose.override.yml
 .env.local
 *.env.local
+

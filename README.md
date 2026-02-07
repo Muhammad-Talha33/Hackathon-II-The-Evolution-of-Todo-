@@ -167,6 +167,84 @@ helm install todo-frontend ./helm/frontend
 
 ---
 
+### Track C: Event-Driven Stack with Dapr + Kafka (Phase V Part B)
+
+Run the full event-driven architecture locally with Dapr sidecars and Redpanda (Kafka-compatible):
+
+**Prerequisites**: Docker Desktop
+
+**Quick Start**:
+```bash
+# 1. Create secrets file (if not done)
+cp .env.example .env
+# Edit .env with your actual secrets
+
+# 2. Start the event-driven stack
+docker-compose -f docker-compose.dapr.yml up -d
+
+# 3. Access services
+# Frontend:          http://localhost:3000
+# Backend API:       http://localhost:8000
+# Redpanda Console:  http://localhost:8080
+# API Docs:          http://localhost:8000/docs
+```
+
+**Architecture**:
+```
+Frontend → Backend API → Dapr Sidecar → Redpanda (Kafka)
+                                              │
+                           ┌──────────────────┼──────────────────┐
+                           ▼                  ▼                  ▼
+                    Reminder Worker    Recurrence Worker    (Future Services)
+                    (logs delivery)   (creates next task)
+```
+
+**Services**:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Backend + Dapr sidecar | 8000 | API + event publishing |
+| Frontend | 3000 | Next.js UI |
+| Redpanda | 19092, 8080 | Kafka broker + Console |
+| Reminder Worker + sidecar | 8001 | Consume TaskReminderDue events |
+| Recurrence Worker + sidecar | 8002 | Consume RecurringTaskGenerated events |
+| Redis | 6379 | Dapr state store (optional) |
+
+**Verify Event Flow**:
+1. Create a task via the API or frontend
+2. Open Redpanda Console at http://localhost:8080
+3. Navigate to Topics → `tasks` → Messages
+4. Verify `TaskCreated` event appears with correct payload
+
+**Troubleshooting**:
+```bash
+# Check all container status
+docker-compose -f docker-compose.dapr.yml ps
+
+# View backend Dapr sidecar logs
+docker logs todo-backend-dapr
+
+# View worker logs
+docker logs reminder-worker
+docker logs recurrence-worker
+
+# Restart Dapr sidecars after component changes
+docker-compose -f docker-compose.dapr.yml restart todo-backend-dapr reminder-worker-dapr recurrence-worker-dapr
+
+# Full teardown
+docker-compose -f docker-compose.dapr.yml down -v
+```
+
+**Key Files**:
+- `docker-compose.dapr.yml` - Full Dapr stack compose file
+- `dapr/components/` - Dapr component configurations (pubsub, statestore, secrets, cron)
+- `services/reminder-worker/` - Reminder event consumer
+- `services/recurrence-worker/` - Recurring task generator
+- `backend/src/events/bus.py` - EventBus (publishes via Dapr)
+- `backend/src/events/dapr_client.py` - Dapr HTTP pub/sub client
+
+---
+
 ### Deployment Resources
 
 | Guide | Description |

@@ -1,0 +1,275 @@
+# =============================================================================
+# Docker Compose - Event-Driven Stack with Dapr + Redpanda
+# =============================================================================
+# Purpose: Full event-driven local development environment
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in secrets
+#   2. docker-compose -f docker-compose.dapr.yml up -d
+#   3. docker-compose -f docker-compose.dapr.yml logs -f
+#   4. docker-compose -f docker-compose.dapr.yml down
+#
+# Access:
+#   - Frontend: http://localhost:3000
+#   - Backend API: http://localhost:8000
+#   - API Docs: http://localhost:8000/docs
+#   - Redpanda Console: http://localhost:8080
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Redpanda - Kafka-Compatible Message Broker
+  # ===========================================================================
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.1
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --advertise-schema-registry-addr internal://redpanda:8081,external://localhost:18081
+    ports:
+      - "19092:19092"   # Kafka API (external)
+      - "18082:18082"   # HTTP Proxy
+      - "18081:18081"   # Schema Registry
+    networks:
+      - dapr-network
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ===========================================================================
+  # Redpanda Console - Web UI for Kafka Topics
+  # ===========================================================================
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.4.5
+    container_name: redpanda-console
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - KAFKA_SCHEMAREGISTRY_ENABLED=true
+      - KAFKA_SCHEMAREGISTRY_URLS=http://redpanda:8081
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - dapr-network
+
+  # ===========================================================================
+  # Redis - Dapr State Store (optional)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - dapr-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Backend Service - FastAPI Application
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+    image: todo-backend:latest
+    container_name: todo-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - PYTHONUNBUFFERED=1
+      - DAPR_HTTP_PORT=3500
+    networks:
+      - dapr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ===========================================================================
+  # Backend Dapr Sidecar
+  # ===========================================================================
+  backend-dapr:
+    image: "daprio/daprd:1.13.0"
+    container_name: todo-backend-dapr
+    command:
+      [
+        "./daprd",
+        "--app-id", "backend",
+        "--app-port", "8000",
+        "--dapr-http-port", "3500",
+        "--dapr-grpc-port", "50001",
+        "--components-path", "/components",
+        "--log-level", "info"
+      ]
+    volumes:
+      - ./dapr/components:/components
+      - ./dapr/secrets:/secrets
+    network_mode: "service:backend"
+    depends_on:
+      backend:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ===========================================================================
+  # Frontend Service - Next.js Application
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    image: todo-frontend:latest
+    container_name: todo-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dapr-network
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000').then(r => {if(!r.ok) process.exit(1)}).catch(() => process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ===========================================================================
+  # Reminder Worker Service
+  # ===========================================================================
+  reminder-worker:
+    build:
+      context: ./services/reminder-worker
+      dockerfile: Dockerfile
+    image: reminder-worker:latest
+    container_name: reminder-worker
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_PORT=8001
+    networks:
+      - dapr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================================================
+  # Reminder Worker Dapr Sidecar
+  # ===========================================================================
+  reminder-worker-dapr:
+    image: "daprio/daprd:1.13.0"
+    container_name: reminder-worker-dapr
+    command:
+      [
+        "./daprd",
+        "--app-id", "reminder-worker",
+        "--app-port", "8001",
+        "--dapr-http-port", "3501",
+        "--dapr-grpc-port", "50002",
+        "--components-path", "/components",
+        "--log-level", "info"
+      ]
+    volumes:
+      - ./dapr/components:/components
+      - ./dapr/secrets:/secrets
+    network_mode: "service:reminder-worker"
+    depends_on:
+      reminder-worker:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+
+  # ===========================================================================
+  # Recurrence Worker Service
+  # ===========================================================================
+  recurrence-worker:
+    build:
+      context: ./services/recurrence-worker
+      dockerfile: Dockerfile
+    image: recurrence-worker:latest
+    container_name: recurrence-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_PORT=8002
+    networks:
+      - dapr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================================================
+  # Recurrence Worker Dapr Sidecar
+  # ===========================================================================
+  recurrence-worker-dapr:
+    image: "daprio/daprd:1.13.0"
+    container_name: recurrence-worker-dapr
+    command:
+      [
+        "./daprd",
+        "--app-id", "recurrence-worker",
+        "--app-port", "8002",
+        "--dapr-http-port", "3502",
+        "--dapr-grpc-port", "50003",
+        "--components-path", "/components",
+        "--log-level", "info"
+      ]
+    volumes:
+      - ./dapr/components:/components
+      - ./dapr/secrets:/secrets
+    network_mode: "service:recurrence-worker"
+    depends_on:
+      recurrence-worker:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  dapr-network:
+    driver: bridge
+    name: dapr-network

@@ -36,6 +36,45 @@ def _strip_tz(dt: datetime | None) -> datetime | None:
     return dt.replace(tzinfo=None)
 
 
+# --- Dapr cron binding endpoint (no auth - called by sidecar) ---
+
+@router.post("/reminder-cron")
+async def reminder_cron(
+    db: AsyncSession = Depends(get_db),
+    event_bus: EventBus = Depends(get_event_bus),
+):
+    """
+    Dapr cron binding handler for automated reminder checks.
+
+    Called by the Dapr sidecar on a 1-minute schedule.
+    Checks ALL users for due reminders (system-level operation).
+    """
+    from sqlalchemy import select as sa_select, distinct
+
+    # Get all user IDs with pending reminders
+    now = datetime.utcnow()
+    result = await db.execute(
+        sa_select(distinct(Task.user_id)).where(
+            Task.remind_at <= now,
+            Task.reminder_sent == False,  # noqa: E712
+            Task.status != TaskStatus.COMPLETE,
+        )
+    )
+    user_ids = [row[0] for row in result.all()]
+
+    total_reminders = 0
+    for user_id in user_ids:
+        tasks = await check_and_emit_reminders(user_id, db, event_bus)
+        total_reminders += len(tasks)
+
+    logger.info(
+        "Cron reminder check: %d reminders triggered for %d users",
+        total_reminders,
+        len(user_ids),
+    )
+    return {"reminders_triggered": total_reminders, "users_checked": len(user_ids)}
+
+
 # --- check-reminders MUST be before /{task_id} routes ---
 
 @router.post("/check-reminders", response_model=List[TaskResponse])
