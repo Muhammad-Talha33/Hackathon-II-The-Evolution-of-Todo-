@@ -4,10 +4,9 @@ kind: Kustomization
 
 namespace: todo-staging
 
-# Reference base resources
+# Reference base resources (namespace already exists)
 resources:
   - ../../base
-  - namespace.yaml
 
 # Staging-specific labels
 commonLabels:
@@ -17,14 +16,19 @@ commonLabels:
 patches:
   - path: patches/replica-count.yaml
   - path: patches/resource-limits.yaml
+  - path: patches/imagepullsecret.yaml
 
 # Image tags for staging (can be overridden by CI/CD)
 images:
   - name: ghcr.io/todo-app/backend
+    newName: ghcr.io/muhammad-talha33/todo-backend
     newTag: staging
   - name: ghcr.io/todo-app/frontend
+    newName: ghcr.io/muhammad-talha33/todo-frontend
     newTag: staging
   - name: ghcr.io/todo-app/reminder-worker
+    newName: ghcr.io/muhammad-talha33/todo-reminder-worker
     newTag: staging
   - name: ghcr.io/todo-app/recurrence-worker
+    newName: ghcr.io/muhammad-talha33/todo-recurrence-worker
     newTag: staging
