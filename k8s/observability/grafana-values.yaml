@@ -1,0 +1,103 @@
+# T064: Grafana Helm values with Prometheus datasource
+# Install: helm install grafana grafana/grafana -n observability -f grafana-values.yaml
+
+replicas: 1
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Admin credentials (override in production via secrets)
+adminUser: admin
+# adminPassword is auto-generated and stored in secret
+
+# Datasources configuration
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.observability.svc.cluster.local
+        access: proxy
+        isDefault: true
+        editable: false
+
+      - name: Zipkin
+        type: zipkin
+        url: http://zipkin.observability.svc.cluster.local:9411
+        access: proxy
+        editable: false
+
+# Dashboard providers
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+# Pre-installed dashboards
+dashboardsConfigMaps:
+  default: grafana-dashboards
+
+# Grafana configuration
+grafana.ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s/"
+
+  auth:
+    disable_login_form: false
+
+  auth.anonymous:
+    enabled: false
+
+  security:
+    admin_user: admin
+
+  users:
+    allow_sign_up: false
+
+  log:
+    mode: console
+    level: info
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress (enable for external access)
+ingress:
+  enabled: false
+  # Uncomment for external access
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  # hosts:
+  #   - grafana.example.com
+  # tls:
+  #   - secretName: grafana-tls
+  #     hosts:
+  #       - grafana.example.com
+
+# Sidecar for dashboard discovery
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    folder: /var/lib/grafana/dashboards

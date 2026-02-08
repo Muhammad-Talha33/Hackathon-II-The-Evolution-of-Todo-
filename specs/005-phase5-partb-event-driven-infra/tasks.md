@@ -168,21 +168,21 @@
 
 ### Verification for User Story 5
 
-- [ ] T059 [US5] Run pytest on backend/tests/ - verify 100% tests pass
-- [ ] T060 [US5] Manual test: signup new account, verify redirect to tasks page
-- [ ] T061 [US5] Manual test: signin existing account, verify task list loads
-- [ ] T062 [US5] Manual test: create task with all fields (due_at, remind_at, tags, priority, recurrence)
-- [ ] T063 [US5] Manual test: update task fields, verify changes persist
-- [ ] T064 [US5] Manual test: complete task, verify status toggle
-- [ ] T065 [US5] Manual test: complete recurring task, verify next instance created
-- [ ] T066 [US5] Manual test: delete task, verify removal from list
-- [ ] T067 [US5] Manual test: filter by status (incomplete, complete, overdue)
-- [ ] T068 [US5] Manual test: filter by tag and priority
-- [ ] T069 [US5] Manual test: search by title/description
-- [ ] T070 [US5] Manual test: chatbot - ask to create a task
-- [ ] T071 [US5] Manual test: chatbot - ask to list tasks
-- [ ] T072 [US5] Manual test: verify API response times under 500ms
-- [ ] T073 [US5] Verify graceful degradation: stop Dapr, confirm API still works
+- [x] T059 [US5] Run pytest on backend/tests/ - verify 100% tests pass
+- [x] T060 [US5] Manual test: signup new account, verify redirect to tasks page
+- [x] T061 [US5] Manual test: signin existing account, verify task list loads
+- [x] T062 [US5] Manual test: create task with all fields (due_at, remind_at, tags, priority, recurrence)
+- [x] T063 [US5] Manual test: update task fields, verify changes persist
+- [x] T064 [US5] Manual test: complete task, verify status toggle
+- [x] T065 [US5] Manual test: complete recurring task, verify next instance created
+- [x] T066 [US5] Manual test: delete task, verify removal from list
+- [x] T067 [US5] Manual test: filter by status (incomplete, complete, overdue)
+- [x] T068 [US5] Manual test: filter by tag and priority
+- [x] T069 [US5] Manual test: search by title/description
+- [x] T070 [US5] Manual test: chatbot - ask to create a task
+- [x] T071 [US5] Manual test: chatbot - ask to list tasks
+- [x] T072 [US5] Manual test: verify API response times under 500ms
+- [x] T073 [US5] Verify graceful degradation: stop Dapr, confirm API still works
 
 **Checkpoint**: All existing features verified. Zero regression confirmed.
 
@@ -195,8 +195,8 @@
 - [x] T074 [P] Add "Dapr + Kafka Local Development" section to README.md
 - [x] T075 [P] Document docker-compose.dapr.yml usage in README.md
 - [x] T076 [P] Document troubleshooting steps (Redpanda, Dapr sidecars, workers) in README.md
-- [ ] T077 Run full docker-compose.dapr.yml up and validate per quickstart.md
-- [ ] T078 Verify Redpanda Console shows all event types with correct payloads
+- [x] T077 Run full docker-compose.dapr.yml up and validate per quickstart.md
+- [x] T078 Verify Redpanda Console shows all event types with correct payloads
 - [x] T079 Final code review: verify no hardcoded secrets, proper logging
 
 ---

@@ -1,0 +1,11 @@
+# T021: Staging namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: todo-staging
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/part-of: todo-system
+    environment: staging
+  annotations:
+    description: "Todo Application - Staging Environment"

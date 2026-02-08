@@ -1,0 +1,68 @@
+# T012: Reminder worker deployment with Dapr sidecar
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-worker
+  labels:
+    app: reminder-worker
+    app.kubernetes.io/name: reminder-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reminder-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: reminder-worker
+        app.kubernetes.io/name: reminder-worker
+      annotations:
+        # Dapr sidecar injection for pub/sub subscription
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "reminder-worker"
+        dapr.io/app-port: "8001"
+        dapr.io/log-level: "info"
+        dapr.io/config: "dapr-config"
+    spec:
+      containers:
+        - name: reminder-worker
+          image: ghcr.io/todo-app/reminder-worker:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8001
+              name: http
+          env:
+            - name: APP_PORT
+              value: "8001"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      restartPolicy: Always

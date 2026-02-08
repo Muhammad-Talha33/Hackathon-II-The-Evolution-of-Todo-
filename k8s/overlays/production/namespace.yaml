@@ -1,0 +1,11 @@
+# T026: Production namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: todo-production
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/part-of: todo-system
+    environment: production
+  annotations:
+    description: "Todo Application - Production Environment"

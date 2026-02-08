@@ -1,0 +1,39 @@
+# T020: Base kustomization - lists all resources with common labels
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: todo-app-base
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: todo-system
+  app.kubernetes.io/managed-by: kustomize
+
+# All base resources
+resources:
+  # Namespace
+  - namespace.yaml
+
+  # Backend API
+  - backend/deployment.yaml
+  - backend/service.yaml
+  - backend/configmap.yaml
+
+  # Frontend
+  - frontend/deployment.yaml
+  - frontend/service.yaml
+  - frontend/configmap.yaml
+
+  # Workers
+  - workers/reminder-worker-deployment.yaml
+  - workers/reminder-worker-service.yaml
+  - workers/recurrence-worker-deployment.yaml
+  - workers/recurrence-worker-service.yaml
+
+  # Dapr Components
+  - dapr/pubsub.yaml
+  - dapr/statestore.yaml
+  - dapr/cron-binding.yaml
+  - dapr/configuration.yaml
+  - dapr/secrets.yaml

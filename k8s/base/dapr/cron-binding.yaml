@@ -1,0 +1,15 @@
+# T018: Dapr cron binding for reminder checks
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-reminder
+  labels:
+    app.kubernetes.io/part-of: todo-system
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    - name: schedule
+      value: "@every 1m"
+    - name: route
+      value: "/cron/check-reminders"

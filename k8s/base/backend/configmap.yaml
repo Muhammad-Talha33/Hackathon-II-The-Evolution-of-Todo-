@@ -1,0 +1,13 @@
+# T008: Backend configmap - non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  labels:
+    app: backend
+    app.kubernetes.io/name: backend
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "info"
+  DAPR_HTTP_PORT: "3500"
+  PYTHONUNBUFFERED: "1"

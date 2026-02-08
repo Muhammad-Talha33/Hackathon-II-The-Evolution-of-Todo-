@@ -1,0 +1,31 @@
+# T027: Production kustomization - references base and applies production patches
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: todo-production
+
+# Reference base resources
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+# Production-specific labels
+commonLabels:
+  environment: production
+
+# Apply production patches
+patches:
+  - path: patches/replica-count.yaml
+  - path: patches/resource-limits.yaml
+
+# Image tags for production (use specific versions, not latest)
+images:
+  - name: ghcr.io/todo-app/backend
+    newTag: v1.0.0
+  - name: ghcr.io/todo-app/frontend
+    newTag: v1.0.0
+  - name: ghcr.io/todo-app/reminder-worker
+    newTag: v1.0.0
+  - name: ghcr.io/todo-app/recurrence-worker
+    newTag: v1.0.0

@@ -1,0 +1,73 @@
+# T014: Recurrence worker deployment with Dapr sidecar and DB access
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recurrence-worker
+  labels:
+    app: recurrence-worker
+    app.kubernetes.io/name: recurrence-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recurrence-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: recurrence-worker
+        app.kubernetes.io/name: recurrence-worker
+      annotations:
+        # Dapr sidecar injection for pub/sub subscription
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "recurrence-worker"
+        dapr.io/app-port: "8002"
+        dapr.io/log-level: "info"
+        dapr.io/config: "dapr-config"
+    spec:
+      containers:
+        - name: recurrence-worker
+          image: ghcr.io/todo-app/recurrence-worker:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8002
+              name: http
+          env:
+            - name: APP_PORT
+              value: "8002"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DATABASE_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      restartPolicy: Always

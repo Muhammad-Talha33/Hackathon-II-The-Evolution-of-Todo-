@@ -1,0 +1,18 @@
+# T015: Recurrence worker service - ClusterIP on port 8002
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurrence-worker
+  labels:
+    app: recurrence-worker
+    app.kubernetes.io/name: recurrence-worker
+    app.kubernetes.io/component: worker
+spec:
+  type: ClusterIP
+  selector:
+    app: recurrence-worker
+  ports:
+    - port: 8002
+      targetPort: 8002
+      protocol: TCP
+      name: http

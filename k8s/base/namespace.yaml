@@ -1,0 +1,11 @@
+# T005: Base namespace manifest for Todo application
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: todo-app
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/part-of: todo-system
+    app.kubernetes.io/managed-by: kustomize
+  annotations:
+    description: "Todo Application namespace - base definition"

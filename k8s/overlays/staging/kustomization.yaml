@@ -1,0 +1,30 @@
+# T022: Staging kustomization - references base and applies staging patches
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: todo-staging
+
+# Reference base resources
+resources:
+  - ../../base
+  - namespace.yaml
+
+# Staging-specific labels
+commonLabels:
+  environment: staging
+
+# Apply staging patches
+patches:
+  - path: patches/replica-count.yaml
+  - path: patches/resource-limits.yaml
+
+# Image tags for staging (can be overridden by CI/CD)
+images:
+  - name: ghcr.io/todo-app/backend
+    newTag: staging
+  - name: ghcr.io/todo-app/frontend
+    newTag: staging
+  - name: ghcr.io/todo-app/reminder-worker
+    newTag: staging
+  - name: ghcr.io/todo-app/recurrence-worker
+    newTag: staging

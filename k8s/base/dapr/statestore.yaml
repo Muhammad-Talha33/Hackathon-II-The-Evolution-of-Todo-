@@ -1,0 +1,20 @@
+# T017: Dapr statestore component with Redis
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  labels:
+    app.kubernetes.io/part-of: todo-system
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: "redis:6379"
+    - name: redisPassword
+      secretKeyRef:
+        name: redis-credentials
+        key: password
+        optional: true
+    - name: actorStateStore
+      value: "true"

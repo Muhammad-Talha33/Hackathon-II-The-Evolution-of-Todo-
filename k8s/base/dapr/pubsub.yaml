@@ -1,0 +1,37 @@
+# T016: Dapr pubsub component for cloud Kafka (Confluent Cloud)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: taskpubsub
+  labels:
+    app.kubernetes.io/part-of: todo-system
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    # Kafka broker address from secret
+    - name: brokers
+      secretKeyRef:
+        name: kafka-credentials
+        key: brokers
+    # SASL authentication
+    - name: authType
+      value: "password"
+    - name: saslUsername
+      secretKeyRef:
+        name: kafka-credentials
+        key: username
+    - name: saslPassword
+      secretKeyRef:
+        name: kafka-credentials
+        key: password
+    - name: saslMechanism
+      value: "PLAIN"
+    # Consumer configuration
+    - name: consumerGroup
+      value: "todo-consumers"
+    - name: initialOffset
+      value: "oldest"
+    # TLS/SSL for cloud Kafka
+    - name: disableTls
+      value: "false"

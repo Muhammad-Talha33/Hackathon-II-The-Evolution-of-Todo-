@@ -1,0 +1,13 @@
+# T011: Frontend configmap - API URL configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  labels:
+    app: frontend
+    app.kubernetes.io/name: frontend
+data:
+  # API URL is set at build time via Kustomize patch or at runtime
+  # For internal cluster communication, use the backend service
+  NEXT_PUBLIC_API_URL: "http://backend:8000"
+  NODE_ENV: "production"
