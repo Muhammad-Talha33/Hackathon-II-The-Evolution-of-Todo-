@@ -1,9 +1,19 @@
 """MCP tools for task management operations."""
+import logging
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
 from src.models import Task, TaskStatus
+from src.events.bus import get_event_bus
+from src.events.models import (
+    TaskCreatedEvent,
+    TaskUpdatedEvent,
+    TaskCompletedEvent,
+    TaskDeletedEvent,
+)
+
+logger = logging.getLogger("mcp_tools")
 
 
 def _task_to_dict(task: Task) -> Dict[str, Any]:
@@ -91,6 +101,20 @@ def add_task(
     session.commit()
     session.refresh(task)
 
+    try:
+        get_event_bus().emit(TaskCreatedEvent(
+            task_id=task.id,
+            user_id=task.user_id,
+            title=task.title,
+            priority=task.priority or "medium",
+            tags=list(task.tags) if task.tags else [],
+            due_at=task.due_at,
+            recurrence_pattern=task.recurrence_pattern,
+            created_at=task.created_at,
+        ))
+    except Exception as e:
+        logger.warning("Failed to emit TaskCreated event from MCP: %s", e)
+
     return {
         "success": True,
         "task": _task_to_dict(task),
@@ -172,6 +196,17 @@ def complete_task(
     session.commit()
     session.refresh(task)
 
+    try:
+        get_event_bus().emit(TaskCompletedEvent(
+            task_id=task.id,
+            user_id=task.user_id,
+            title=task.title,
+            had_recurrence=bool(task.recurrence_pattern),
+            was_overdue=bool(task.due_at and task.due_at < datetime.utcnow()),
+        ))
+    except Exception as e:
+        logger.warning("Failed to emit TaskCompleted event from MCP: %s", e)
+
     return {
         "success": True,
         "task": _task_to_dict(task),
@@ -209,8 +244,19 @@ def delete_task(
 
     # Delete task
     task_title = task.title
+    task_id_uuid = task.id
+    task_user_id = task.user_id
     session.delete(task)
     session.commit()
+
+    try:
+        get_event_bus().emit(TaskDeletedEvent(
+            task_id=task_id_uuid,
+            user_id=task_user_id,
+            title=task_title,
+        ))
+    except Exception as e:
+        logger.warning("Failed to emit TaskDeleted event from MCP: %s", e)
 
     return {
         "success": True,
@@ -267,31 +313,48 @@ def update_task(
     if str(task.user_id) != user_id:
         raise ValueError("You can only update your own tasks")
 
-    # Update fields
+    # Track which fields are being updated
+    updated_fields = []
     if title and title.strip():
         task.title = title.strip()
+        updated_fields.append("title")
     if description is not None:
         task.description = description.strip() if description else None
+        updated_fields.append("description")
     if priority is not None:
         task.priority = priority
+        updated_fields.append("priority")
     if due_at is not None:
         try:
             task.due_at = datetime.fromisoformat(due_at.replace("Z", "+00:00"))
         except ValueError:
             raise ValueError(f"Invalid due_at format: {due_at}")
+        updated_fields.append("due_at")
     if remind_at is not None:
         try:
             task.remind_at = datetime.fromisoformat(remind_at.replace("Z", "+00:00"))
         except ValueError:
             raise ValueError(f"Invalid remind_at format: {remind_at}")
+        updated_fields.append("remind_at")
     if tags is not None:
         task.tags = tags
+        updated_fields.append("tags")
     if recurrence_pattern is not None:
         task.recurrence_pattern = recurrence_pattern
+        updated_fields.append("recurrence_pattern")
 
     session.add(task)
     session.commit()
     session.refresh(task)
+
+    try:
+        get_event_bus().emit(TaskUpdatedEvent(
+            task_id=task.id,
+            user_id=task.user_id,
+            updated_fields=updated_fields,
+        ))
+    except Exception as e:
+        logger.warning("Failed to emit TaskUpdated event from MCP: %s", e)
 
     return {
         "success": True,
